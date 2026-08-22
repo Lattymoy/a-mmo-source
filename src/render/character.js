@@ -55,9 +55,12 @@ export function initCape(e){
 
 /* ax, ay is the wearer's interpolated position this frame — lunge included, so
    the cape whips on an attack with no attack-specific code. */
-export function updateCape(e, ax, ay, now, dt){
-  if(!e.cape) initCape(e);
-
+/* Facing comes from actual motion, so a dash throws the cloth the right way and
+   a lunge whips it with no attack-specific code. Split out of the rib sim so
+   facing survives even though the sim itself is no longer used for rendering —
+   the cape is authored poses now. See docs/bible Character Presentation. */
+export function updateFacing(e, ax, ay){
+  if(!e.face){ e.face = { x: 0, y: 1 }; e._lax = ax; e._lay = ay }
   const mx = ax - e._lax, my = ay - e._lay;
   if(Math.abs(mx) > 1e-4 || Math.abs(my) > 1e-4){
     const m = Math.hypot(mx, my) || 1;
@@ -67,6 +70,11 @@ export function updateCape(e, ax, ay, now, dt){
     e.face.x /= f; e.face.y /= f;
   }
   e._lax = ax; e._lay = ay;
+}
+
+export function updateCape(e, ax, ay, now, dt){
+  if(!e.cape) initCape(e);
+  updateFacing(e, ax, ay);
 
   const k = Math.min(dt / 16.67, 3);          // frame-rate independence, clamped
   const back = Math.atan2(-e.face.y, -e.face.x);

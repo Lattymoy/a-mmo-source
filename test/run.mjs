@@ -472,4 +472,49 @@ group('avatar');
         Object.values(AVATAR).every(v => /^#[0-9A-Fa-f]{6}$/.test(v)));
 }
 
+/* ── cape poses ────────────────────────────────────────────────────────── */
+group('cape poses');
+{
+  const { CAPES, CAPE_SIZE, MATERIALS: ART } = await import('../src/render/gear-sprites.js');
+  const { capePose } = await import('../src/render/avatar.js');
+  const { CAPE_POSES } = await import('../tools/sprites/author.mjs');
+
+  const authored = CAPE_POSES();
+  let drift = [];
+  for(const [k, a] of Object.entries(authored))
+    if(a.rows.join('|') !== (CAPES[k] || []).join('|')) drift.push(k);
+  check('committed cape poses match the authoring source', drift.length === 0,
+        drift.join(' ') || 'in sync');
+
+  for(const [k, rows] of Object.entries(CAPES)){
+    check(`${k} is square at CAPE_SIZE`,
+          rows.length === CAPE_SIZE && rows.every(r => r.length === CAPE_SIZE));
+    const bad = new Set();
+    for(const r of rows) for(const c of r) if(c !== '.' && !ART.cloth[c]) bad.add(c);
+    check(`${k} uses only cloth palette letters`, bad.size === 0, [...bad].join(''));
+  }
+
+  /* Every one of the eight directions must resolve to an AUTHORED pose plus a
+     whole-number quarter turn. An arbitrary rotation would resample the pixels
+     and undo the whole reason for authoring them. */
+  let bad = 0;
+  for(let i = 0; i < 32; i++){
+    const a = i / 32 * Math.PI * 2;
+    const e = { face: { x: Math.cos(a), y: Math.sin(a) }, x: 3, y: 4 };
+    for(const gait of [0, 1]){
+      const { key, quarter } = capePose(e, gait);
+      if(!CAPES[key]) bad++;
+      if(!Number.isInteger(quarter) || quarter < 0 || quarter > 3) bad++;
+    }
+  }
+  check('every facing maps to an authored pose and a quarter turn', bad === 0, `${bad}`);
+
+  // rest when still, sway when moving — and the two sways must differ
+  const e = { face: { x: 0, y: 1 }, x: 2, y: 2 };
+  check('still uses the rest pose', capePose(e, 0).key.startsWith('rest'));
+  check('moving uses a sway pose', capePose(e, 1).key.startsWith('sway'));
+  check('sway alternates with the step',
+        capePose({ ...e, x: 2 }, 1).key !== capePose({ ...e, x: 3 }, 1).key);
+}
+
 report();

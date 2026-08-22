@@ -4,7 +4,7 @@ import { S } from '../core/state.js';
 import { GROUND } from '../world/ground.js';
 import { palette } from './themes.js';
 import { view, canvas, context } from './camera.js';
-import { updateCape, updateHands, breathT, gaitT } from './character.js';
+import { updateFacing, updateHands, breathT, gaitT } from './character.js';
 import { drawAvatar } from './avatar.js';
 import { drawGearArt, hasArt, clearAnchor } from './gear.js';
 import { BODY_R, KEYLINE } from './character.js';
@@ -216,12 +216,12 @@ export function draw(now){
       // weight shifts back as the step lands, and the body rises a touch
       const lean = gait * TS * 0.05;
       const bob  = gait * TS * 0.06;
-      updateCape(e, ex, ey, now, dt);
+      updateFacing(e, ex, ey);
       updateHands(e, ex, ey, now, dt, gait);      // solve before anything draws on them
       ctx.shadowBlur = 0;
       const twoHanded = e.eq.main && GROUND[e.eq.main].twoHand;
       drawAvatar(ctx, e, ex, ey, ox, oy, TS, breath, dim, 0.34,
-                 twoHanded ? [1, 1] : [e.eq.off, e.eq.main]);
+                 twoHanded ? [1, 1] : [e.eq.off, e.eq.main], gait);
       drawHeld(ctx, e, ox, oy, TS, T, now);
       drawLevel(ctx, e, sx - e.face.x * lean, sy - e.face.y * lean - bob, breath);
     }

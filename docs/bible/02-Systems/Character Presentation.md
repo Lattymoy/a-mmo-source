@@ -34,38 +34,45 @@ px/tile against the sword's 37.5, and the bow was redrawn larger rather than
 scaled. **Sprite size in the world is a consequence of pixel count, never of a
 scale factor.**
 
-### The cape is a trapezoid, not a mantle
+### The cape: authored poses, not a simulation
 
-**Status:** `STATED` — iterated against Mac's reference.
+**Status:** `STATED` — Mac's call, after the simulated version was judged
+hand-*painted* rather than hand-authored.
 
-The first pixel cape fanned sideways: ribs anchored across a wide arc and
-splayed, which opened gaps between pleats so it read as separate tongues of
-cloth rather than one garment.
+A simulated cape can only ever be filled polygons. However well the silhouette
+and shading are tuned, there is no 1px specular run down a fold, no stepped
+highlight where cloth catches the light, no hand-placed accent in a deep pleat.
+Those are the things that make pixel art read as drawn, and none of them can be
+generated from a verlet mesh.
 
-A cape is **gathered narrow at the collar and widens as it falls**. That is a
-combination of two dials, not one:
+So the cape is now **six authored poses**: rest, sway-left, sway-right, each in
+a cardinal and a 45° variant. The other directions come from **90° turns, which
+are pixel-exact**. Nothing rotates pixel art by an arbitrary angle at any point.
 
-- `SPREAD` — how wide the ribs are pinned. Narrow.
-- `SPILL` — how strongly ribs are pulled parallel. Low enough that they fan
-  outward as they descend, high enough that the outer ones do not flare into
-  wings.
+The poses are rasterized parametrically in polar space around the collar, in
+`tools/sprites/author.mjs` — which is precisely what allows the diagonals to be
+*authored at 45°* with correct pixel stepping instead of resampled at runtime.
 
-Rib length tapers from the centre out, so the hem comes to a point rather than
-cutting straight across.
+Pose selection: rest while still, sway while moving, alternating left/right with
+each step. Gated by tests covering all 32 facings.
 
-### Pleats need hard steps and a notched hem
+### What the tuning taught
 
-Four tones stepped hard, not blended — at this pixel density a gentle gradient
-quantizes to one flat colour and the folds disappear entirely. Black creases run
-down every internal rib; without them the tones abut and the cape reads as a
-colour ramp instead of separate folds.
+- **The cloth must be wider than the body.** Anything narrower reads as a crown
+  sitting on the head rather than a cape behind it.
+- **It hangs behind the head, not from its centre.** Centred on the body, the
+  collar lands at the sphere's middle and the sphere hides everything but a
+  sliver of hem.
+- **Creases must start well out from the collar.** Near it they converge, and
+  with the head covering that region every pleat reads as a separate spike.
+- **The hem step is tiny.** At the cape's radius even a small fraction is a
+  visible step; 7.5% cut a deep zigzag and the whole thing read as a starburst.
 
-The hem **notches** between pleats: each rib tip is a point and the gap cuts
-back toward the collar. A hem running tip to tip reads as a cut-out.
+### The rib simulation is retained but unused
 
-**The notch is a fixed distance, not a fraction of length.** Scaling it meant a
-long cape got a proportionally enormous notch, every pleat became a spike, and
-the whole thing read as flames.
+`character.js` still contains the verlet cape and its tests. Facing was split
+out into `updateFacing`, which is what the renderer now calls. The sim is dead
+weight if the authored poses stick — delete it then, not before.
 
 ### The player's palette is fixed
 

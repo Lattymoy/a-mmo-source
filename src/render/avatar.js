@@ -14,7 +14,7 @@
    size for the entire game, or the character and its sword would visibly
    disagree about how big a pixel is. */
 
-import { DENSITY as SPRITE_DENSITY } from './gear-sprites.js';
+import { DENSITY as SPRITE_DENSITY, CAPES, CAPE_SIZE, MATERIALS as ART } from './gear-sprites.js';
 
 // the game's one pixel size, shared with every gear sprite
 export const DENSITY = SPRITE_DENSITY;
@@ -78,98 +78,54 @@ function quantize(){
   bctx.putImageData(img, 0, 0);
 }
 
-/* ── cape: pleats, collar, hem.
-   Each rib becomes a PLEAT — a quad from the collar to the hem, shaded by
-   alternating tone. Pleats are what the reference has that a smooth silhouette
-   does not: the cloth reads as gathered fabric rather than a cut-out. */
-function cape(ctx, e, ax, ay, breath){
-  if(!e.cape) return;
-  const P = n => [n.x - ax, n.y - ay];
-  const ribs = e.cape;
-  const last = ribs.length - 1;
-  const tip = j => P(ribs[j][ribs[j].length - 1]);
+/* ── cape: AUTHORED POSES, blitted.
 
-  /* The hem NOTCHES between pleats: each rib tip is a point, and the gap
-     between two tips cuts back toward the collar. A hem running straight from
-     tip to tip reads as a cut-out; the notches make it cloth gathered in folds.
+   A simulated cape can only ever be filled polygons — no 1px specular run down
+   a fold, no hand-placed accent in a deep pleat. It reads as hand-painted. The
+   poses are drawn pixel by pixel in tools/sprites/author.mjs instead.
 
-     The inset is a FIXED distance, not a fraction of the cape's length. Scaling
-     it turned every pleat into a spike — a long cape got a proportionally
-     enormous notch and the whole thing read as flames. */
-  const NOTCH = 0.11;
-  const notchAt = (a, b) => {
-    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-    const d = Math.hypot(mx, my) || 1;
-    return [mx - mx / d * NOTCH, my - my / d * NOTCH];
-  };
-  const hem = () => {
-    for(let j = 1; j < ribs.length; j++){
-      const a = tip(j - 1), b = tip(j);
-      const n = notchAt(a, b);
-      ctx.lineTo(n[0], n[1]);
-      ctx.lineTo(b[0], b[1]);
+   Direction snaps to one of eight. Cardinal and 45-degree poses are AUTHORED at
+   those angles; the remaining six directions come from 90-degree turns, which
+   are pixel-exact. Nothing here ever rotates pixel art by an arbitrary angle. */
+const CLOTH = ART.cloth;
+
+export function capePose(e, gait){
+  // the cape trails opposite the facing
+  const ang = Math.atan2(-e.face.x, -e.face.y);
+  const oct = ((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8;
+  const diagonal = oct % 2 === 1;
+  const quarter = diagonal ? (oct - 1) / 2 : oct / 2;
+
+  let pose = 'rest';
+  if(gait > 0.05) pose = ((e.x + e.y) & 1) ? 'swayL' : 'swayR';
+  return { key: pose + (diagonal ? '45' : '0'), quarter };
+}
+
+function cape(ctx, e, gait){
+  const { key, quarter } = capePose(e, gait);
+  const rows = CAPES[key];
+  if(!rows) return;
+
+  /* Hung BEHIND the head, not from its centre. Centred on the body, the collar
+     sits at the sphere's middle and the sphere covers everything but a sliver
+     of hem. The offset is applied before the turn, in world space, so it is
+     correct for the diagonal poses too. */
+  const OFF = 5;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.translate(bsize / 2 - e.face.x * OFF, bsize / 2 - e.face.y * OFF);
+  ctx.rotate(quarter * Math.PI / 2);          // exact quarter turns only
+  const o = -CAPE_SIZE / 2;
+  for(let r = 0; r < CAPE_SIZE; r++){
+    const row = rows[r];
+    for(let x = 0; x < CAPE_SIZE; x++){
+      const c = row[x];
+      if(c === '.') continue;
+      ctx.fillStyle = CLOTH[c];
+      ctx.fillRect(o + x, o + r, 1.02, 1.02);
     }
-  };
-
-  const shell = () => {
-    ctx.beginPath();
-    const a = P(ribs[0][0]);
-    ctx.moveTo(a[0], a[1]);
-    for(let i = 1; i < ribs[0].length; i++){ const p = P(ribs[0][i]); ctx.lineTo(p[0], p[1]) }
-    hem();
-    for(let i = ribs[last].length - 2; i >= 0; i--){ const p = P(ribs[last][i]); ctx.lineTo(p[0], p[1]) }
-    for(let j = last - 1; j >= 1; j--){ const p = P(ribs[j][0]); ctx.lineTo(p[0], p[1]) }
-    ctx.closePath();
-  };
-
-  ctx.strokeStyle = AVATAR.K;
-  ctx.lineWidth = 0.10;
-  shell(); ctx.stroke();
-  ctx.fillStyle = AVATAR.R3;
-  shell(); ctx.fill();
-
-  /* Pleats. Four tones stepped hard rather than blended — at this pixel size a
-     gentle gradient quantizes to a single flat colour and the folds vanish. */
-  const TONE = [AVATAR.R2, AVATAR.R4, AVATAR.R1, AVATAR.R3];
-  for(let j = 0; j < last; j++){
-    const A = ribs[j], B = ribs[j + 1];
-    ctx.beginPath();
-    const a0 = P(A[0]); ctx.moveTo(a0[0], a0[1]);
-    for(let i = 1; i < A.length; i++){ const p = P(A[i]); ctx.lineTo(p[0], p[1]) }
-    const n = notchAt(tip(j), tip(j + 1));
-    ctx.lineTo(n[0], n[1]);                    // the same notch, so pleat meets hem
-    for(let i = B.length - 1; i >= 0; i--){ const p = P(B[i]); ctx.lineTo(p[0], p[1]) }
-    ctx.closePath();
-    ctx.fillStyle = TONE[j % TONE.length];
-    ctx.fill();
   }
-
-  /* Hard black creases between pleats. Without them the tones abut directly and
-     the cape reads as a colour ramp instead of separate folds. */
-  ctx.strokeStyle = AVATAR.K;
-  ctx.lineWidth = 0.045;
-  for(let j = 1; j < last; j++){
-    const rib = ribs[j];
-    ctx.beginPath();
-    const s0 = P(rib[0]); ctx.moveTo(s0[0], s0[1]);
-    for(let i = 1; i < rib.length; i++){ const p = P(rib[i]); ctx.lineTo(p[0], p[1]) }
-    ctx.stroke();
-  }
-
-  // collar: the band the cloth gathers into, behind the head
-  const cr = 0.44 * breath;   // wider than the head, so a band actually shows
-  ctx.beginPath();
-  ctx.arc(-e.face.x * 0.06, -e.face.y * 0.06, cr, 0, Math.PI * 2);
-  ctx.strokeStyle = AVATAR.K;
-  ctx.lineWidth = 0.09;
-  ctx.stroke();
-  ctx.fillStyle = AVATAR.R2;
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(-e.face.x * 0.06, -e.face.y * 0.06, cr - 0.07, 0, Math.PI * 2);
-  ctx.strokeStyle = AVATAR.R1;
-  ctx.lineWidth = 0.05;
-  ctx.stroke();
+  ctx.restore();
 }
 
 /* A shaded sphere: rim, body, lit face, highlight. Four tones is all it takes,
@@ -198,9 +154,9 @@ const BODY_TONE = [AVATAR.G1, AVATAR.G2, AVATAR.G3, AVATAR.G4];
 
 /** Draws cape, body and hands as one pixel-art unit. Returns the blit rect so
  *  the caller can put the level digit on top at full resolution. */
-export function drawAvatar(ctx, e, ax, ay, ox, oy, TS, breath, alpha, bodyR, held){
+export function drawAvatar(ctx, e, ax, ay, ox, oy, TS, breath, alpha, bodyR, held, gait){
   const b = buffer();
-  cape(b, e, ax, ay, breath);
+  cape(b, e, gait);
   sphere(b, 0, 0, bodyR * breath, BODY_TONE);
   if(e.hands)
     for(let i = 0; i < e.hands.length; i++){

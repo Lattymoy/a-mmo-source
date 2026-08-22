@@ -48,6 +48,18 @@ pixel-for-pixel against the committed data. Change one pixel in `author.mjs` and
 forget to regenerate, and the suite fails with `shield: pixels`. Verified by
 doing exactly that.
 
+## Moving things get POSES, not simulation
+
+The cape was simulated first and it read as hand-painted, because a simulation
+can only produce filled shapes — never a hand-placed pixel. It is now six
+authored poses swapped by direction and gait.
+
+The technique that makes this cheap: rasterize the pose **parametrically** (the
+cape is drawn in polar space around its collar), so a 45° variant can be
+*authored at 45°* with correct pixel stepping rather than rotated at runtime.
+Six poses then cover eight directions, because the remaining turns are 90° and
+pixel-exact.
+
 ## Dynamic things can be pixel art too
 
 Sprites cover static gear. Anything that moves every frame — the cape, the
