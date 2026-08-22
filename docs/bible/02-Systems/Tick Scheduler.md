@@ -1,6 +1,6 @@
 # Tick Scheduler
 
-**Status:** `PROPOSED` (raised in discussion) · `BUILT` (running in [[tap-grid]])
+**Status:** `PROPOSED` (raised in discussion) · `BUILT` (running in [[Architecture]])
 
 Not stated by Mac. Proposed as the answer to co-op, and built into the prototype
 so the input model could be tested against it.

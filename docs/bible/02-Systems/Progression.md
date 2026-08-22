@@ -22,7 +22,7 @@ assumed.
 gear comes from.
 
 It does **not** resolve what scavenged flora is for. Flora gathering exists in
-[[tap-grid]] with placeholder trait strings. Whether flora is a second material
+[[Architecture]] with placeholder trait strings. Whether flora is a second material
 track, a consumable track, or vestigial is [[Open Questions|open]].
 
 ## Large bosses vs. the viewport

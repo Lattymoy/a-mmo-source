@@ -19,7 +19,7 @@ See [[Raum]].
 
 ## Architectural split
 
-**Status:** `BUILT` — in [[tap-grid]]
+**Status:** `BUILT` — in [[Architecture]]
 
 Colour-dictated biomes force a separation that did not exist before:
 

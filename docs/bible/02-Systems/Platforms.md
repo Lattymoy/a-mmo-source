@@ -38,7 +38,7 @@ Not stated either way. Do not assume.
 Missions are matchmade ([[World Structure]]), so a desktop player and a mobile
 player can be in the same instance seeing very different amounts of it.
 
-This is mostly already handled: [[tap-grid]] limits knowledge by **FOV radius**,
+This is mostly already handled: [[Architecture]] limits knowledge by **FOV radius**,
 not by viewport. A desktop player with a wider screen sees more *explored
 memory*, not more live information.
 

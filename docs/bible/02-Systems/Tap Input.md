@@ -13,7 +13,7 @@ The tap is one verb whose meaning is set by context and by the armed ability.
 
 ## Prototype additions
 
-**Status:** `BUILT` — in [[tap-grid]], not confirmed as design
+**Status:** `BUILT` — in [[Architecture]], not confirmed as design
 
 These were introduced to make the stated model work on a touchscreen. They are
 implementation answers, not accepted design:

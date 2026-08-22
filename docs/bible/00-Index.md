@@ -31,9 +31,9 @@ Every page carries a **Status** line using one of:
 - [[Equipment]]
 - [[Combat Presentation]]
 
-## Prototypes
+## Build
 
-- [[tap-grid]]
+- [[Architecture]]
 
 ## Roadmap
 

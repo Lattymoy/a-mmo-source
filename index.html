@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>a-mmo</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#05070A;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  body{display:flex;flex-direction:column;user-select:none;touch-action:manipulation}
+
+  #top{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;
+    font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#4A5A66;flex:0 0 auto}
+  #top .stat{color:#8A9AA6}
+  #top .stat b{color:#D8E4EC;font-weight:500}
+  #top .sp{flex:1}
+  .tog{border:1px solid #1C2830;background:transparent;color:#5C6E7A;
+    font:inherit;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    padding:5px 8px;border-radius:2px}
+  .tog:active{background:#111A20}
+
+  #wrap{flex:1;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%}
+
+  #log{position:absolute;left:12px;right:12px;bottom:8px;pointer-events:none;
+    font-size:10.5px;line-height:1.5;letter-spacing:.02em;color:#5E7080}
+  #log div:last-child{color:#A8BCC8}
+
+  #bar{flex:0 0 auto;display:flex;gap:6px;padding:8px 10px calc(env(safe-area-inset-bottom) + 10px)}
+  .ab{flex:1;height:58px;border:1px solid #17222A;background:#0A0E12;border-radius:3px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    color:#5C6E7A;font:inherit;position:relative;overflow:hidden}
+  .ab .g{font-size:19px;line-height:1;color:#8A9AA6}
+  .ab .n{font-size:8px;letter-spacing:.13em;text-transform:uppercase}
+  .ab.armed{border-color:#3E6E8C;background:#0E1A22}
+  .ab.armed .g,.ab.armed .n{color:#9CD8F4}
+  .ab.cool{opacity:.32}
+  .ab .cd{position:absolute;left:0;bottom:0;height:2px;background:#3E6E8C}
+  #eq{position:absolute;inset:0;display:none;flex-direction:column;
+    background:rgba(5,8,12,.94);padding:18px 16px;overflow:auto}
+  #eq.on{display:flex}
+  #eq h2{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#4A5A66;
+    font-weight:500;margin-bottom:12px}
+  #eqSlots{display:flex;gap:8px;margin-bottom:6px}
+  .slot{flex:1;border:1px solid #1C2830;border-radius:3px;padding:12px 8px;text-align:center}
+  .slot .lab{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:#4A5A66}
+  .slot .val{font-size:24px;color:#E8C87A;line-height:1.3;min-height:31px}
+  .slot .val.empty{color:#243038}
+  #eqStat{display:flex;gap:16px;margin:14px 0 16px;font-size:10px;
+    letter-spacing:.14em;text-transform:uppercase;color:#5C6E7A}
+  #eqStat b{color:#D8E4EC;font-weight:500}
+  #eqList{display:flex;flex-direction:column;gap:4px}
+  .row{display:flex;align-items:center;gap:12px;padding:11px 12px;
+    border:1px solid #17222A;border-radius:3px;background:#0A0E12;color:#8A9AA6;
+    font:inherit;font-size:11px;text-align:left}
+  .row.on{border-color:#3E6E8C;background:#0E1A22;color:#9CD8F4}
+  .row .g{font-size:19px;width:20px;text-align:center;color:#E8C87A}
+  .row .n{flex:1;letter-spacing:.06em}
+  .row .s{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#4A5A66}
+  .row:disabled{opacity:.4}
+  #eqClose{margin-top:18px;align-self:flex-start}
+  #dead{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(5,7,10,.86);color:#C4553A;font-size:12px;letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <span class="stat">HP <b id="hp">20</b></span>
+  <span class="stat">LVL <b id="lvl">1</b></span>
+  <span class="stat">T <b id="clk">0</b></span>
+  <span class="stat" id="inv">— — —</span>
+  <span class="sp"></span>
+  <button class="tog" id="bEq">gear</button>
+  <button class="tog" id="bLvl">lvl+</button>
+  <button class="tog" id="bBiome">uncorrupt</button>
+  <button class="tog" id="bTheme">board</button>
+  <button class="tog" id="bCam">close</button>
+  <button class="tog" id="bNew">new</button>
+</div>
+
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="log"></div>
+  <div id="eq">
+    <h2>Equipment</h2>
+    <div id="eqSlots">
+      <div class="slot"><div class="lab">off hand</div><div class="val" id="slotOff">—</div></div>
+      <div class="slot"><div class="lab">main hand</div><div class="val" id="slotMain">—</div></div>
+    </div>
+    <div id="eqStat"><span>ATK <b id="eqAtk">3</b></span><span>DEF <b id="eqDef">0</b></span></div>
+    <div id="eqList"></div>
+    <button class="tog" id="eqClose">close</button>
+  </div>
+  <div id="dead">dead — tap new</div>
+</div>
+
+<div id="bar"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

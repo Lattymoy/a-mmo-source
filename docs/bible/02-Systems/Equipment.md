@@ -1,6 +1,6 @@
 # Equipment
 
-**Status:** `STATED` — glyphs · `BUILT` in [[tap-grid]]
+**Status:** `STATED` — glyphs · `BUILT` in [[Architecture]]
 
 | Glyph | Item |
 | --- | --- |

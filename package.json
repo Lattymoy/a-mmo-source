@@ -1,0 +1,16 @@
+{
+  "name": "a-mmo-source",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node test/run.mjs",
+    "bundle": "vite build && node tools/bundle-single.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1",
+    "vite": "^5.4.11"
+  }
+}

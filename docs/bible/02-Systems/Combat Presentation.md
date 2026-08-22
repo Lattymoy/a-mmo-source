@@ -1,6 +1,6 @@
 # Combat Presentation
 
-**Status:** `STATED` · `BUILT` in [[tap-grid]]
+**Status:** `STATED` · `BUILT` in [[Architecture]]
 
 Stated:
 

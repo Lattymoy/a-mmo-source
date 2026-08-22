@@ -3,7 +3,7 @@
 **Status:** `BUILT` — three readings of one simulation · obstacle treatment chosen
 
 Mac stated the grid could be "maybe ASCII, or maybe just a simple black grid".
-[[tap-grid]] ships three treatments behind a toggle so that choice can be made by
+[[Architecture]] ships three treatments behind a toggle so that choice can be made by
 looking rather than arguing.
 
 | Theme | Reading |

@@ -61,4 +61,4 @@ and everything downstream is wasted work if the model does not hold. Cheap to
 fake: a second `@` on the same scheduler with simple AI, then watch whether the
 pacing survives someone else acting between your steps.
 
-Related: [[Premise]] · [[tap-grid]]
+Related: [[Premise]] · [[Architecture]]
