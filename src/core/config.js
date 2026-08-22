@@ -7,8 +7,8 @@ export const FOV = 8;             // sight radius — see docs/bible Platforms: 
 
 export const LVL_MAX = 25;        // max level, base game
 
-export const MS_PER_TICK = 0.70;  // real ms per game tick; a 100-tick step is 70ms
-export const MOVE_MS = 65;        // glyph slide, lands just before the next step
+export const MS_PER_TICK = 1.05;  // real ms per game tick; a 100-tick step is 105ms
+export const MOVE_MS = 95;        // glyph slide, lands just before the next step
 export const LUNGE_MS = 190;      // attack lunge and weapon swing
 export const SLASH_MS = 170;
 export const SHOT_MS = 190;

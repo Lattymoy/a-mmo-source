@@ -216,12 +216,15 @@ export const KEYLINE   = 0.075; // stroke bleed, both edges combined
 export const HAND_GAP  = 0.13;  // clear space the eye should actually see
 
 export const HAND_FWD = 0.66;   // tiles ahead of centre
-export const HAND_LAT = 0.24;   // tiles to either side
+export const HAND_LAT = 0.40;   // tiles to either side — wide enough that the
+                                // two nubs read as a pair, not as one blob
 export const HAND_R   = 0.10;   // nub radius in tiles
 const HAND_STIFF = 0.20;        // pull toward the target
 const HAND_DAMP  = 0.87;        // low enough to overshoot, high enough to settle
 const HAND_DRIFT = 0.032;       // independent idle float, tiles
-const HAND_LEASH = 0.88;        // never trail further than this from the body
+const HAND_LEASH = 0.95;        // never trail further than this from the body
+export const HAND_FWD_MIN = 0.30; // and never fall behind: the nubs lag, but the
+                                // lag is lateral and radial, never backward
 // nor drift closer: body + its keyline + the visible gap + the nub + its keyline
 export const HAND_MIN = BODY_R + KEYLINE + HAND_GAP + HAND_R;
 
@@ -251,6 +254,8 @@ export function updateHands(e, ax, ay, now, dt, gait){
   const k = Math.min(dt / 16.67, 3);
   const targets = handTargets(e, ax, ay, gait);
 
+  const fx = e.face.x, fy = e.face.y;
+
   for(let i = 0; i < 2; i++){
     const h = e.hands[i];
     const [tx, ty] = targets[i];
@@ -271,16 +276,34 @@ export function updateHands(e, ax, ay, now, dt, gait){
     h.x += vx * k;
     h.y += vy * k;
 
-    /* Held in a shell around the body: a leash so a dash cannot strand them
-       across the room, and an inner floor so idle drift cannot push a nub over
-       the level digit. Free to float anywhere between. */
+    /* Held in a shell around the body, and always IN FRONT of it. Solved in
+       facing space rather than world space: `fwd` is how far ahead the nub is,
+       `lat` how far to the side. A spring alone drags the nubs backward past
+       the wearer whenever they set off, which reads as the character towing two
+       balloons. The lag is kept — it just cannot go behind. */
+    const px_ = -fy, py_ = fx;
     const ox_ = h.x - ax, oy_ = h.y - ay;
-    const d = Math.hypot(ox_, oy_) || 1;
-    const clamped = Math.min(HAND_LEASH, Math.max(HAND_MIN, d));
-    if(clamped !== d){
-      h.x = ax + ox_ / d * clamped;
-      h.y = ay + oy_ / d * clamped;
+    let fwd = ox_ * fx + oy_ * fy;
+    let lat = ox_ * px_ + oy_ * py_;
+
+    fwd = Math.max(fwd, HAND_FWD_MIN);
+
+    const d = Math.hypot(fwd, lat) || 1;
+    if(d > HAND_LEASH){
+      const k2 = HAND_LEASH / d;
+      fwd *= k2; lat *= k2;
+      if(fwd < HAND_FWD_MIN){          // shrinking broke the floor: take it out of lat
+        fwd = HAND_FWD_MIN;
+        const room = HAND_LEASH*HAND_LEASH - fwd*fwd;
+        lat = Math.sign(lat) * Math.sqrt(Math.max(0, room));
+      }
+    } else if(d < HAND_MIN){
+      const k2 = HAND_MIN / d;         // scaling up only ever increases fwd
+      fwd *= k2; lat *= k2;
     }
+
+    h.x = ax + fx * fwd + px_ * lat;
+    h.y = ay + fy * fwd + py_ * lat;
   }
 }
 

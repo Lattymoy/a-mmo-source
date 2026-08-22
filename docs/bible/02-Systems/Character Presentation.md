@@ -93,13 +93,29 @@ they stop, and floats on its own idle cycle at a different rate and phase from
 its partner. Pinned at a fixed offset they read as painted-on dots; floating,
 they read as separate things travelling with the character.
 
-The target sits 0.44 tiles ahead of centre and 0.26 to either side, and the two
+The target sits 0.66 tiles ahead of centre and 0.40 to either side, and the two
 **swing in opposition through a step** — one leads while the other trails. That
 opposition is what makes a walk read as a walk rather than a slide.
 
 Free-floating needs bounds at both ends. The nubs are held in a **shell**: a
 leash at 0.88 tiles so a dash cannot strand them across the room, and an inner
 floor so they can never reach the body. Anywhere between, they float untouched.
+
+### Lag sideways, never backward
+
+**Status:** `STATED` — the hands must not move behind the character when moving.
+
+A spring alone drags the nubs backward past the wearer every time they set off,
+which reads as the character towing two balloons — and puts the hands on the
+same side as the cape, destroying the facing signal both exist to give.
+
+Solved in **facing space** rather than world space: the nub's offset is split
+into how far ahead it is and how far to the side, and the forward component is
+floored at 0.30 tiles. The lag is kept in full; it just runs lateral and radial
+instead of backward. The shell clamps are applied in the same space so the two
+constraints cannot fight each other.
+
+Gated on every frame of motion, not just at rest.
 
 ### The gap is a budget, not a number
 
@@ -111,7 +127,9 @@ The inner floor is now derived rather than guessed:
 HAND_MIN = BODY_R + KEYLINE + HAND_GAP + HAND_R
 ```
 
-`HAND_GAP` is the clear space the eye should actually see (0.13 tiles);
+`HAND_GAP` is the clear space the eye should actually see (0.13 tiles); the same
+budget, doubled, is what the two nubs must keep clear of **each other** — they
+have to read as a pair, not as one blob under the body;
 `KEYLINE` accounts for the stroke bleeding off both edges. Change the ring's
 size or its stroke and the nubs move out to suit, with no re-tuning.
 

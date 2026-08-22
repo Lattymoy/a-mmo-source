@@ -37,8 +37,14 @@ actor whose turn has come due resolves in the same frame. Verified by
 simulation: player step rate holds at 14.3/sec across 0, 16, 64 and 256
 monsters.
 
-Current rate is 0.70ms per tick — a 100-tick step takes 70ms. Glyph slide is
-65ms so it lands just before the next step.
+Rate is tuned by feel and then pinned by a test. 0.70ms/tick (70ms per step)
+read as too fast; it now sits at **1.05ms per tick — 105ms per step, about 9.5
+steps per second**. The glyph slide is 95ms so it lands just before the next
+step.
+
+The suite asserts the pace stays inside a readable band (7–12 steps/sec) rather
+than asserting a single number, so the value can be tuned without rewriting the
+gate, while a regression that divides pace by actor count still fails loudly.
 
 **The idle rule still holds.** When the player has nothing queued the clock
 stops. Monsters do not get free turns while you think. In co-op another player

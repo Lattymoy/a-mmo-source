@@ -140,7 +140,9 @@ group('scheduler');
   check('pace independent of actor count',
         [16, 64, 256].every(n => rate(n) === base),
         `0:${base} 16:${rate(16)} 64:${rate(64)} 256:${rate(256)}`);
-  check('pace is brisk', base / 10 > 12, `${(base/10).toFixed(1)} steps/sec`);
+  // a readable walking pace: fast enough not to drag, slow enough to follow
+  const perSec = base / 10;
+  check('pace is readable', perSec > 7 && perSec < 12, `${perSec.toFixed(1)} steps/sec`);
 }
 
 /* ── entities ──────────────────────────────────────────────────────────── */
@@ -236,8 +238,8 @@ group('cape');
 group('hands');
 {
   const { initCape, updateCape, initHands, updateHands, handTargets,
-          HAND_R, HAND_LEASH, HAND_MIN, BODY_R, KEYLINE, HAND_GAP } =
-    await import('../src/render/character.js');
+          HAND_R, HAND_LEASH, HAND_MIN, BODY_R, KEYLINE, HAND_GAP,
+          HAND_FWD_MIN, HAND_LAT } = await import('../src/render/character.js');
 
   const e = { x: 5, y: 5, at: -9999 };
   initCape(e);
@@ -261,7 +263,10 @@ group('hands');
         `gaps ${gap(L).toFixed(3)}, ${gap(R).toFixed(3)} vs ${HAND_GAP}`);
 
   const sep = Math.hypot(L[0]-R[0], L[1]-R[1]);
-  check('hands do not overlap each other', sep > HAND_R * 2, `${sep.toFixed(3)}`);
+  // not merely non-overlapping: clear air between them, keylines allowed for
+  const nubGap = sep - HAND_R*2 - KEYLINE;
+  check('nubs are well separated from each other', nubGap > HAND_GAP * 2,
+        `${nubGap.toFixed(3)} clear vs ${(HAND_GAP*2).toFixed(3)}`);
 
   const mid = e.cape[(e.cape.length/2)|0];
   const tip = mid[mid.length-1];
@@ -269,7 +274,7 @@ group('hands');
         `cape at ${ahead([tip.x, tip.y]).toFixed(2)}`);
 
   // the point of the rework: they must NOT be rigidly attached
-  let maxLag = 0, leashBreak = 0, touching = 0;
+  let maxLag = 0, leashBreak = 0, touching = 0, behind = 0;
   for(let f = 0; f < 400; f++){
     ax += 0.09;                                   // set off at speed
     e.x = Math.round(ax);
@@ -282,11 +287,15 @@ group('hands');
       if(dd > HAND_LEASH + 1e-9 || dd < HAND_MIN - 1e-9) leashBreak++;
       // never, at any point in motion, may a nub touch the body
       if(dd - HAND_R - BODY_R - KEYLINE < HAND_GAP - 1e-9) touching++;
+      // nor drift behind it — the lag must be lateral, never backward
+      const f = (e.hands[i].x - ax)*e.face.x + (e.hands[i].y - ay)*e.face.y;
+      if(f < HAND_FWD_MIN - 1e-9) behind++;
     }
   }
   check('hands lag the body, not welded to it', maxLag > 0.04, `max lag ${maxLag.toFixed(3)} tiles`);
   check('nubs stay in their shell', leashBreak === 0, `${leashBreak} frames`);
   check('never touch the body, even mid-motion', touching === 0, `${touching} frames`);
+  check('never fall behind the character', behind === 0, `${behind} frames`);
 
   // and they must still settle, or they would jitter forever
   for(let f = 0; f < 600; f++) updateHands(e, ax, ay, (700+f)*16.67, 16.67, 0);
