@@ -10,11 +10,10 @@
    step to get wrong. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { build, MATERIALS, GEAR_ART, DENSITY, CAPE_POSES, CAPE_SIZE } from './author.mjs';
+import { build, MATERIALS, GEAR_ART, DENSITY } from './author.mjs';
 import { encodePNG } from './png.mjs';
 
 const sprites = build();
-const capes = CAPE_POSES();
 
 // ── data module
 const q = s => `'${s}'`;
@@ -29,15 +28,6 @@ export const MATERIALS = ${JSON.stringify(MATERIALS, null, 2)
 
 export const GEAR_ART = ${JSON.stringify(GEAR_ART, null, 2)
   .replace(/"(\w+)":/g, '$1:').replace(/"/g, "'")};
-
-/** Authored cape poses. Cardinal and 45-degree variants; the other directions
- *  come from pixel-exact 90-degree turns. */
-export const CAPE_SIZE = ${CAPE_SIZE};
-export const CAPES = {
-${Object.entries(capes).map(([k, s]) => `  ${k}: [
-${s.rows.map(r => `    ${q(r)},`).join('\n')}
-  ],`).join('\n')}
-};
 
 export const SPRITES = {
 ${Object.entries(sprites).map(([k, s]) => `  ${k}: {
@@ -78,30 +68,6 @@ for(const [, s] of list){
 }
 fs.mkdirSync('public', { recursive: true });
 fs.writeFileSync('public/sprite-sheet.png', encodePNG(W, H, px));
-
-// cape sheet
-{
-  const list = Object.entries(capes);
-  const W2 = list.length * (CAPE_SIZE * 4 + GAP) + GAP;
-  const H2 = CAPE_SIZE * 4 + GAP * 2;
-  const p2 = new Uint8Array(W2 * H2 * 4);
-  for(let i = 0; i < W2 * H2; i++) p2.set([64, 74, 84, 255], i * 4);
-  let x0 = GAP;
-  for(const [, sp] of list){
-    const pal = MATERIALS[sp.material];
-    for(let r = 0; r < sp.rows.length; r++)
-      for(let x = 0; x < sp.rows[r].length; x++){
-        const c = sp.rows[r][x];
-        if(c === '.') continue;
-        const col = hex(pal[c]);
-        for(let dy = 0; dy < 4; dy++) for(let dx = 0; dx < 4; dx++)
-          p2.set(col, ((GAP + r*4 + dy) * W2 + x0 + x*4 + dx) * 4);
-      }
-    x0 += CAPE_SIZE * 4 + GAP;
-  }
-  fs.writeFileSync('public/cape-sheet.png', encodePNG(W2, H2, p2));
-  console.log('public/cape-sheet.png', `${list.length} poses at ${CAPE_SIZE}x${CAPE_SIZE}`);
-}
 
 console.log(`${out}`);
 for(const [k, s] of list){

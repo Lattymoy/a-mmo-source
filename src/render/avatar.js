@@ -1,33 +1,23 @@
 /* THE AVATAR — the player, rendered as pixel art.
 
-   The problem this solves: the cape has to keep FLOWING (it is a live verlet
-   sim, not a pose) while looking hand-drawn and hard-edged. Authoring cape
-   frames as sprites would kill the physics; drawing it with canvas paths gives
-   soft antialiased edges that read as vector art next to the gear.
-
-   So the whole avatar is drawn into a small offscreen buffer at the game's
+   The body and hand nubs are drawn into a small offscreen buffer at the game's
    pixel density, quantized to a fixed palette with hard alpha, and blitted up
-   with smoothing off. Anything drawn into that buffer becomes pixel art,
-   including geometry that changes every frame.
+   with smoothing off. Canvas antialiases every path it draws, so the buffer
+   alone would give soft "blurry pixel art"; the quantize pass is what makes the
+   result flat and hard-edged.
 
    Density is derived from the gear sprites, not chosen separately — one pixel
    size for the entire game, or the character and its sword would visibly
    disagree about how big a pixel is. */
 
-import { DENSITY as SPRITE_DENSITY, CAPES, CAPE_SIZE, MATERIALS as ART } from './gear-sprites.js';
+import { DENSITY as SPRITE_DENSITY } from './gear-sprites.js';
 
 // the game's one pixel size, shared with every gear sprite
 export const DENSITY = SPRITE_DENSITY;
-const SPAN = 2.4;                                   // tiles the buffer covers
+const SPAN = 1.6;                                   // tiles the buffer covers
 
 export const AVATAR = {
   K:  '#151013',   // outline
-  // cape
-  R1: '#5A0A0E',   // deepest fold
-  R2: '#7E0F14',   // shadow
-  R3: '#C0161C',   // body
-  R4: '#E8323A',   // lit fold
-  // body and hands
   G1: '#6E6E74',   // rim shadow
   G2: '#A8A8B0',   // mid
   G3: '#DCDCE2',   // lit
@@ -78,56 +68,6 @@ function quantize(){
   bctx.putImageData(img, 0, 0);
 }
 
-/* ── cape: AUTHORED POSES, blitted.
-
-   A simulated cape can only ever be filled polygons — no 1px specular run down
-   a fold, no hand-placed accent in a deep pleat. It reads as hand-painted. The
-   poses are drawn pixel by pixel in tools/sprites/author.mjs instead.
-
-   Direction snaps to one of eight. Cardinal and 45-degree poses are AUTHORED at
-   those angles; the remaining six directions come from 90-degree turns, which
-   are pixel-exact. Nothing here ever rotates pixel art by an arbitrary angle. */
-const CLOTH = ART.cloth;
-
-export function capePose(e, gait){
-  // the cape trails opposite the facing
-  const ang = Math.atan2(-e.face.x, -e.face.y);
-  const oct = ((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8;
-  const diagonal = oct % 2 === 1;
-  const quarter = diagonal ? (oct - 1) / 2 : oct / 2;
-
-  let pose = 'rest';
-  if(gait > 0.05) pose = ((e.x + e.y) & 1) ? 'swayL' : 'swayR';
-  return { key: pose + (diagonal ? '45' : '0'), quarter };
-}
-
-function cape(ctx, e, gait){
-  const { key, quarter } = capePose(e, gait);
-  const rows = CAPES[key];
-  if(!rows) return;
-
-  /* Hung BEHIND the head, not from its centre. Centred on the body, the collar
-     sits at the sphere's middle and the sphere covers everything but a sliver
-     of hem. The offset is applied before the turn, in world space, so it is
-     correct for the diagonal poses too. */
-  const OFF = 5;
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.translate(bsize / 2 - e.face.x * OFF, bsize / 2 - e.face.y * OFF);
-  ctx.rotate(quarter * Math.PI / 2);          // exact quarter turns only
-  const o = -CAPE_SIZE / 2;
-  for(let r = 0; r < CAPE_SIZE; r++){
-    const row = rows[r];
-    for(let x = 0; x < CAPE_SIZE; x++){
-      const c = row[x];
-      if(c === '.') continue;
-      ctx.fillStyle = CLOTH[c];
-      ctx.fillRect(o + x, o + r, 1.02, 1.02);
-    }
-  }
-  ctx.restore();
-}
-
 /* A shaded sphere: rim, body, lit face, highlight. Four tones is all it takes,
    and all it should take — more and it stops matching the gear. */
 /* A shaded sphere. Small ones drop the inner steps: at hand size the four
@@ -152,11 +92,10 @@ function sphere(ctx, cx, cy, r, tone, small){
 
 const BODY_TONE = [AVATAR.G1, AVATAR.G2, AVATAR.G3, AVATAR.G4];
 
-/** Draws cape, body and hands as one pixel-art unit. Returns the blit rect so
- *  the caller can put the level digit on top at full resolution. */
-export function drawAvatar(ctx, e, ax, ay, ox, oy, TS, breath, alpha, bodyR, held, gait){
+/** Draws the body and hand nubs as one pixel-art unit, quantized together so
+ *  they share one palette. The level digit goes on top at full resolution. */
+export function drawAvatar(ctx, e, ax, ay, ox, oy, TS, breath, alpha, bodyR, held){
   const b = buffer();
-  cape(b, e, gait);
   sphere(b, 0, 0, bodyR * breath, BODY_TONE);
   if(e.hands)
     for(let i = 0; i < e.hands.length; i++){

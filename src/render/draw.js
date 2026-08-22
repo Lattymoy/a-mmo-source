@@ -88,7 +88,7 @@ function drawHeld(ctx, e, ox, oy, TS, T, now){
   const two = e.eq.main && GROUND[e.eq.main].twoHand;
 
   ctx.save();
-  ctx.font = `${Math.floor(TS * 0.54)}px ${MONO}`;   // holds its weight beside the cape
+  ctx.font = `${Math.floor(TS * 0.54)}px ${MONO}`;   // heavy enough to read at tile size
   ctx.lineJoin = 'round';
 
   // a two-hander is held BETWEEN the hands, not in one of them
@@ -221,7 +221,7 @@ export function draw(now){
       ctx.shadowBlur = 0;
       const twoHanded = e.eq.main && GROUND[e.eq.main].twoHand;
       drawAvatar(ctx, e, ex, ey, ox, oy, TS, breath, dim, 0.34,
-                 twoHanded ? [1, 1] : [e.eq.off, e.eq.main], gait);
+                 twoHanded ? [1, 1] : [e.eq.off, e.eq.main]);
       drawHeld(ctx, e, ox, oy, TS, T, now);
       drawLevel(ctx, e, sx - e.face.x * lean, sy - e.face.y * lean - bob, breath);
     }

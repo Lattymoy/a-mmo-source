@@ -50,15 +50,15 @@ doing exactly that.
 
 ## Moving things get POSES, not simulation
 
-The cape was simulated first and it read as hand-painted, because a simulation
-can only produce filled shapes — never a hand-placed pixel. It is now six
-authored poses swapped by direction and gait.
+The cape proved this and was then cut, but the lesson stands and applies to the
+next moving thing: a simulation can only produce filled shapes, never a
+hand-placed pixel, so anything that must read as pixel art gets **authored
+poses** swapped by state.
 
-The technique that makes this cheap: rasterize the pose **parametrically** (the
-cape is drawn in polar space around its collar), so a 45° variant can be
-*authored at 45°* with correct pixel stepping rather than rotated at runtime.
-Six poses then cover eight directions, because the remaining turns are 90° and
-pixel-exact.
+The technique that makes it cheap: rasterize each pose **parametrically**, so a
+45° variant can be *authored at 45°* with correct pixel stepping rather than
+rotated at runtime. Six poses then cover eight directions, because the
+remaining turns are 90° and pixel-exact.
 
 ## Dynamic things can be pixel art too
 

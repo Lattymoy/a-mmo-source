@@ -34,45 +34,28 @@ px/tile against the sword's 37.5, and the bow was redrawn larger rather than
 scaled. **Sprite size in the world is a consequence of pixel count, never of a
 scale factor.**
 
-### The cape: authored poses, not a simulation
+### The cape was cut
 
-**Status:** `STATED` — Mac's call, after the simulated version was judged
-hand-*painted* rather than hand-authored.
+**Status:** `STATED` — removed 2026-08-22.
 
-A simulated cape can only ever be filled polygons. However well the silhouette
-and shading are tuned, there is no 1px specular run down a fold, no stepped
-highlight where cloth catches the light, no hand-placed accent in a deep pleat.
-Those are the things that make pixel art read as drawn, and none of them can be
-generated from a verlet mesh.
+It was built twice: first as a live verlet rib simulation, then as six authored
+pixel poses. The simulation read as hand-*painted* — a simulation can only ever
+produce filled shapes, never a 1px specular run down a fold or a hand-placed
+accent in a deep pleat. The authored poses fixed that but never matched the
+reference's drape, and Mac cut it rather than keep tuning.
 
-So the cape is now **six authored poses**: rest, sway-left, sway-right, each in
-a cardinal and a 45° variant. The other directions come from **90° turns, which
-are pixel-exact**. Nothing rotates pixel art by an arbitrary angle at any point.
+Both implementations are gone: the rib sim, the pose generator, the cloth
+palette, the cape sheet and their tests. `updateFacing` was salvaged out of the
+sim, because facing-from-motion is needed by everything else.
 
-The poses are rasterized parametrically in polar space around the collar, in
-`tools/sprites/author.mjs` — which is precisely what allows the diagonals to be
-*authored at 45°* with correct pixel stepping instead of resampled at runtime.
+**What this costs:** the cape and the hands were the two halves of the facing
+signal — cloth trailing, nubs leading. **The nubs now carry it alone**, so their
+forward placement stops being polish and becomes load-bearing. The test that
+asserted "hands oppose the cape" was rewritten to assert they are the sole
+directional signal.
 
-Pose selection: rest while still, sway while moving, alternating left/right with
-each step. Gated by tests covering all 32 facings.
-
-### What the tuning taught
-
-- **The cloth must be wider than the body.** Anything narrower reads as a crown
-  sitting on the head rather than a cape behind it.
-- **It hangs behind the head, not from its centre.** Centred on the body, the
-  collar lands at the sphere's middle and the sphere hides everything but a
-  sliver of hem.
-- **Creases must start well out from the collar.** Near it they converge, and
-  with the head covering that region every pleat reads as a separate spike.
-- **The hem step is tiny.** At the cape's radius even a small fraction is a
-  visible step; 7.5% cut a deep zigzag and the whole thing read as a starburst.
-
-### The rib simulation is retained but unused
-
-`character.js` still contains the verlet cape and its tests. Facing was split
-out into `updateFacing`, which is what the renderer now calls. The sim is dead
-weight if the authored poses stick — delete it then, not before.
+Anything reintroducing a trailing element should read that history first rather
+than starting a third attempt from scratch.
 
 ### The player's palette is fixed
 

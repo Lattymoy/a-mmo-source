@@ -168,95 +168,17 @@ group('entities');
   check('entAt finds the player', entAt(S.player.x, S.player.y) === S.player);
 }
 
-/* ── cape ──────────────────────────────────────────────────────────────── */
-group('cape');
-{
-  const { initCape, updateCape, handPositions, RIBS, RIB_N, SHOULDER,
-          HAND_FWD, HAND_R, breathT, gaitT } =
-    await import('../src/render/character.js');
-  // ribs vary in length (curl + centre bias), so reach is measured per rib
-  const reachOf = seg => SHOULDER + (RIB_N - 1) * seg;
-
-  const e = { x: 10, y: 10, at: -9999 };
-  initCape(e);
-  check('cape is ribbed', e.cape.length === RIBS && e.cape[0].length === RIB_N);
-
-  let ax = 10, ay = 10, bad = 0, overlong = 0, stretched = 0;
-  for(let f = 0; f < 900; f++){
-    if(f < 300)      { ax += 0.04 }
-    else if(f < 450) { ax += 0.30; ay += 0.30 }      // dash-speed motion
-    else if(f < 700) { ax -= 0.06; ay -= 0.02 }      // hard reverse
-    e.x = Math.round(ax); e.y = Math.round(ay);
-    updateCape(e, ax, ay, f * 16.67, 16.67);
-
-    for(const rib of e.cape){
-      const seg = Math.hypot(rib[1].x - rib[0].x, rib[1].y - rib[0].y);
-      for(let i = 0; i < rib.length; i++){
-        const n = rib[i];
-        if(!Number.isFinite(n.x) || !Number.isFinite(n.y)) bad++;
-        if(i > 0){
-          const p = rib[i-1];
-          const d = Math.hypot(n.x - p.x, n.y - p.y);
-          if(Math.abs(d - seg) > 1e-6) stretched++;   // hard length constraint
-        }
-      }
-      const tip = rib[rib.length-1];
-      if(Math.hypot(tip.x - ax, tip.y - ay) > reachOf(seg) + 1e-6) overlong++;
-    }
-  }
-  check('cape never goes non-finite', bad === 0, `${bad} bad nodes`);
-  check('segments never stretch', stretched === 0, `${stretched} violations`);
-  check('cloth cannot exceed its length', overlong === 0, `${overlong} rib-frames`);
-
-  // idle: must settle behind, not pool on top
-  for(let f = 0; f < 400; f++) updateCape(e, ax, ay, (900+f) * 16.67, 16.67);
-  const mid = e.cape[(RIBS/2)|0];
-  const tip = mid[mid.length-1];
-  const midSeg = Math.hypot(mid[1].x - mid[0].x, mid[1].y - mid[0].y);
-  const trail = Math.hypot(tip.x - ax, tip.y - ay);
-  check('settles trailing, not collapsed', trail > reachOf(midSeg) * 0.7,
-        `tip ${trail.toFixed(3)} tiles behind`);
-  const dot = ((tip.x-ax)*-e.face.x + (tip.y-ay)*-e.face.y) / (trail || 1);
-  check('settles BEHIND the facing', dot > 0.8, `alignment ${dot.toFixed(2)}`);
-
-  // the failure bend-limiting exists to prevent: cloth piling on the body
-  let onBody = 0, bx = 10, by = 10;
-  for(let f = 0; f < 1200; f++){
-    bx += Math.sin(f / 7) * 0.22;
-    by += Math.cos(f / 5) * 0.22;
-    e.x = Math.round(bx); e.y = Math.round(by);
-    updateCape(e, bx, by, f * 16.67, 16.67);
-    for(const rib of e.cape)
-      for(let i = 2; i < rib.length; i++)
-        if(Math.hypot(rib[i].x - bx, rib[i].y - by) < SHOULDER * 0.8) onBody++;
-  }
-  check('cloth never piles onto the wearer', onBody === 0, `${onBody} node-frames`);
-
-  // the cape must be WIDER than the body, or it is not a mantle
-  const tips = e.cape.map(r => r[r.length-1]);
-  let span = 0;
-  for(const a of tips) for(const b of tips)
-    span = Math.max(span, Math.hypot(a.x-b.x, a.y-b.y));
-  check('hem spreads wider than the body', span > 0.8, `${span.toFixed(2)} tiles`);
-
-  let lo = 9, hi = 0;
-  for(let f = 0; f < 2000; f++){ const b = breathT(e, f*16.67); lo = Math.min(lo,b); hi = Math.max(hi,b) }
-  check('breath stays subtle', lo > 0.94 && hi < 1.06, `${lo.toFixed(3)}..${hi.toFixed(3)}`);
-  check('gait is 0 at rest', gaitT({ at: -9999 }, 0, 65) === 0);
-}
-
 /* ── hands ─────────────────────────────────────────────────────────────── */
 group('hands');
 {
-  const { initCape, updateCape, initHands, updateHands, handTargets,
+  const { updateFacing, initHands, updateHands, handTargets,
           HAND_R, HAND_LEASH, HAND_MIN, BODY_R, KEYLINE, HAND_GAP,
           HAND_FWD_MIN, HAND_LAT, HAND_LAT_MIN } =
     await import('../src/render/character.js');
 
   const e = { x: 5, y: 5, at: -9999 };
-  initCape(e);
   let ax = 5, ay = 5;
-  for(let f = 0; f < 200; f++){ ax += 0.05; updateCape(e, ax, ay, f*16.67, 16.67) }
+  for(let f = 0; f < 200; f++){ ax += 0.05; updateFacing(e, ax, ay) }
   initHands(e, ax, ay);
   for(let f = 0; f < 300; f++) updateHands(e, ax, ay, f*16.67, 16.67, 0);
 
@@ -280,17 +202,16 @@ group('hands');
   check('nubs are well separated from each other', nubGap > HAND_GAP * 2,
         `${nubGap.toFixed(3)} clear vs ${(HAND_GAP*2).toFixed(3)}`);
 
-  const mid = e.cape[(e.cape.length/2)|0];
-  const tip = mid[mid.length-1];
-  check('hands oppose the cape', ahead([tip.x, tip.y]) < 0,
-        `cape at ${ahead([tip.x, tip.y]).toFixed(2)}`);
+  // facing is the only directional signal left now the cape is gone, so the
+  // hands carry it alone: they must sit forward of the body, always
+  check('hands are the sole facing signal', ahead(L) > 0 && ahead(R) > 0);
 
   // the point of the rework: they must NOT be rigidly attached
   let maxLag = 0, leashBreak = 0, touching = 0, behind = 0;
   for(let f = 0; f < 400; f++){
     ax += 0.09;                                   // set off at speed
     e.x = Math.round(ax);
-    updateCape(e, ax, ay, (300+f)*16.67, 16.67);
+    updateFacing(e, ax, ay);
     updateHands(e, ax, ay, (300+f)*16.67, 16.67, 0);
     const t = handTargets(e, ax, ay, 0);
     for(let i = 0; i < 2; i++){
@@ -342,7 +263,7 @@ group('hands');
       tx += Math.cos(a) * 0.11;
       ty += Math.sin(a) * 0.11;
       e.x = Math.round(tx); e.y = Math.round(ty);
-      updateCape(e, tx, ty, f*16.67, 16.67);
+      updateFacing(e, tx, ty);
       updateHands(e, tx, ty, f*16.67, 16.67, Math.sin(f/6));
 
       const [h0, h1] = e.hands;
@@ -470,51 +391,6 @@ group('avatar');
         Object.keys(AVATAR).length <= 12, `${Object.keys(AVATAR).length} tones`);
   check('every avatar tone is a hex colour',
         Object.values(AVATAR).every(v => /^#[0-9A-Fa-f]{6}$/.test(v)));
-}
-
-/* ── cape poses ────────────────────────────────────────────────────────── */
-group('cape poses');
-{
-  const { CAPES, CAPE_SIZE, MATERIALS: ART } = await import('../src/render/gear-sprites.js');
-  const { capePose } = await import('../src/render/avatar.js');
-  const { CAPE_POSES } = await import('../tools/sprites/author.mjs');
-
-  const authored = CAPE_POSES();
-  let drift = [];
-  for(const [k, a] of Object.entries(authored))
-    if(a.rows.join('|') !== (CAPES[k] || []).join('|')) drift.push(k);
-  check('committed cape poses match the authoring source', drift.length === 0,
-        drift.join(' ') || 'in sync');
-
-  for(const [k, rows] of Object.entries(CAPES)){
-    check(`${k} is square at CAPE_SIZE`,
-          rows.length === CAPE_SIZE && rows.every(r => r.length === CAPE_SIZE));
-    const bad = new Set();
-    for(const r of rows) for(const c of r) if(c !== '.' && !ART.cloth[c]) bad.add(c);
-    check(`${k} uses only cloth palette letters`, bad.size === 0, [...bad].join(''));
-  }
-
-  /* Every one of the eight directions must resolve to an AUTHORED pose plus a
-     whole-number quarter turn. An arbitrary rotation would resample the pixels
-     and undo the whole reason for authoring them. */
-  let bad = 0;
-  for(let i = 0; i < 32; i++){
-    const a = i / 32 * Math.PI * 2;
-    const e = { face: { x: Math.cos(a), y: Math.sin(a) }, x: 3, y: 4 };
-    for(const gait of [0, 1]){
-      const { key, quarter } = capePose(e, gait);
-      if(!CAPES[key]) bad++;
-      if(!Number.isInteger(quarter) || quarter < 0 || quarter > 3) bad++;
-    }
-  }
-  check('every facing maps to an authored pose and a quarter turn', bad === 0, `${bad}`);
-
-  // rest when still, sway when moving — and the two sways must differ
-  const e = { face: { x: 0, y: 1 }, x: 2, y: 2 };
-  check('still uses the rest pose', capePose(e, 0).key.startsWith('rest'));
-  check('moving uses a sway pose', capePose(e, 1).key.startsWith('sway'));
-  check('sway alternates with the step',
-        capePose({ ...e, x: 2 }, 1).key !== capePose({ ...e, x: 3 }, 1).key);
 }
 
 report();
