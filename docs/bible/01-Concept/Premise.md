@@ -4,7 +4,14 @@
 
 A mobile game. Simple on the surface, complex under the hood.
 
-The framing, in Mac's words:
+## Setting
+
+You exist in the world of **Raum**, after a major collapse of civilization.
+Humanity gathers within a hub. The shared world begins there.
+
+## Framing
+
+The original framing, in Mac's words:
 
 - It starts with a single pixel.
 - A grid — maybe ASCII, maybe just a simple black grid.
@@ -22,7 +29,7 @@ Looking **simpler on the surface, deeper underneath**.
 
 ## What is not yet decided
 
-Craft gear, scavenge flora and "with friends" are stated as pillars but have no
-system behind them. See [[Open Questions]].
+Scavenge flora is stated as a pillar but has no system behind it, and its
+relationship to boss materials is unresolved. See [[Open Questions]].
 
-Related: [[Tap Input]] · [[Prior Art]]
+Related: [[World Structure]] · [[Progression]] · [[Tap Input]] · [[Prior Art]]

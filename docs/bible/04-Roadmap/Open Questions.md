@@ -13,12 +13,23 @@
 
 ## Stated pillars with no system behind them
 
-4. **Craft gear.** Stated in [[Premise]]. Nothing designed. Flora traits in
-   [[tap-grid]] are placeholder strings, not a trait system.
-5. **Scavenge flora.** Gathering works; what it feeds does not exist.
-6. **With friends.** Co-op is the constraint [[Tick Scheduler]] was built for and
-   the one thing it has never run. Scale is undecided — "friends" was stated,
-   MMO was raised as a question, neither settled.
+4. **Upgrade vs. refine vs. build.** Three verbs stated in [[Progression]], no
+   distinction defined between them.
+5. **Scavenge flora.** Gathering works. Boss material is now the stated source of
+   gear, so what flora feeds is unresolved — second material track, consumables,
+   or vestigial.
+6. **Party size.** Missions are solo or matchmade ([[World Structure]]). The
+   matchmade party size is not stated.
+7. **Hub as shared space.** The hub is where "the shared world begins" — whether
+   players see each other in it, and how many, is not stated.
+8. **Zone generation.** "Procedural zone-based areas" is stated. What varies
+   between zones — biome, layout, hazard, boss — is not.
+
+## Resolved since
+
+- **Co-op scale** is now bounded: hub-and-instance with matchmade missions, not a
+  persistent shared field. See [[World Structure]].
+- **Where gear comes from** is boss material. See [[Progression]].
 
 ## Standing call
 

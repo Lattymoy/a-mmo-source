@@ -15,6 +15,7 @@ Every page carries a **Status** line using one of:
 ## Concept
 
 - [[Premise]]
+- [[World Structure]]
 - [[Prior Art]]
 
 ## Systems
@@ -22,6 +23,7 @@ Every page carries a **Status** line using one of:
 - [[Tick Scheduler]]
 - [[Tap Input]]
 - [[Visual Treatments]]
+- [[Progression]]
 
 ## Prototypes
 
