@@ -79,6 +79,7 @@ const ri=(n)=>Math.floor(rnd()*n);
 
 /* ───────────────────────── state ───────────────────────── */
 let wall, seen, vis, flora, ents, player, clock, waiting, dead;
+let wface;   // 0 = buried rock, else 1 + connection mask (1=N 2=E 4=S 8=W)
 let path = [], armed = null, valid = null;
 let logs = [];
 
@@ -125,7 +126,42 @@ function genMap(){
 
   seen = new Uint8Array(W*H);
   vis  = new Uint8Array(W*H);
+  computeWallGeometry();
   return bestN;
+}
+
+/* Walls are geometry, not texture. A wall tile that touches open floor is a
+   FACE — the surface you can actually see. Faces connect to neighbouring faces,
+   so the contour of a chamber draws itself with proper corners, tees and ends.
+   Wall tiles with no floor around them are buried rock and stay recessive.
+
+   Faces are STROKED, not lettered. Box-drawing glyphs only tile in a terminal,
+   where the cell is ~0.6 as wide as it is tall; on a square grid the strokes
+   never meet and the wall reads as dashes. Drawing centre-to-edge segments
+   guarantees adjacent faces join exactly on the shared edge. Mask bits:
+   1=N 2=E 4=S 8=W. */
+function computeWallGeometry(){
+  const face = new Uint8Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(!wall[idx(x,y)]) continue;
+    let touchesFloor = false;
+    for(let dy=-1;dy<=1&&!touchesFloor;dy++)for(let dx=-1;dx<=1;dx++){
+      if(!dx&&!dy) continue;
+      const a=x+dx,b=y+dy;
+      if(inB(a,b)&&!wall[idx(a,b)]){ touchesFloor=true; break }
+    }
+    if(touchesFloor) face[idx(x,y)] = 1;
+  }
+  wface = new Uint8Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(!face[idx(x,y)]) continue;
+    let m = 0;
+    if(inB(x,y-1)&&face[idx(x,y-1)]) m |= 1;
+    if(inB(x+1,y)&&face[idx(x+1,y)]) m |= 2;
+    if(inB(x,y+1)&&face[idx(x,y+1)]) m |= 4;
+    if(inB(x-1,y)&&face[idx(x-1,y)]) m |= 8;
+    wface[idx(x,y)] = 1 + m;
+  }
 }
 
 function openTiles(){
@@ -528,15 +564,35 @@ function draw(now){
       ctx.fillRect(x*TS-ox+1, y*TS-oy+1, TS-2, TS-2);
     }
 
-    ctx.globalAlpha = v ? (isValid?1:dim) : 0.55*dim;
     const wallT = wall[idx(x,y)]===1;
+    const f = wallT ? wface[idx(x,y)] : 0;
+    const buried = wallT && !f;
+    ctx.globalAlpha = (v ? (isValid?1:dim) : 0.55*dim) * (buried ? 0.30 : 1);
     const fl = flora.get(idx(x,y));
-    let g = wallT ? T.wallGlyph : (fl ? FLORA[fl].g : T.floorGlyph);
     let col = !v ? T.mem : (wallT ? T.wall : (fl ? T.flora : T.floor));
     if(isValid && !wallT) col = T.lit;
-    ctx.fillStyle = col;
     ctx.shadowBlur = 0;
-    ctx.fillText(g, sx, sy);
+
+    if(f){
+      const m = f-1, h = TS/2;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = Math.max(1.5, TS*0.11);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      if(m){
+        if(m&1){ ctx.moveTo(sx,sy); ctx.lineTo(sx, sy-h) }
+        if(m&2){ ctx.moveTo(sx,sy); ctx.lineTo(sx+h, sy) }
+        if(m&4){ ctx.moveTo(sx,sy); ctx.lineTo(sx, sy+h) }
+        if(m&8){ ctx.moveTo(sx,sy); ctx.lineTo(sx-h, sy) }
+        ctx.stroke();
+      } else {                                  // isolated pillar
+        ctx.fillStyle = col;
+        ctx.fillRect(sx-TS*0.16, sy-TS*0.16, TS*0.32, TS*0.32);
+      }
+    } else {
+      ctx.fillStyle = col;
+      ctx.fillText(wallT ? T.wallGlyph : (fl ? FLORA[fl].g : T.floorGlyph), sx, sy);
+    }
   }
 
   for(const e of ents){

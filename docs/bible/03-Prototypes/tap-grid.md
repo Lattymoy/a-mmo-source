@@ -9,6 +9,7 @@ request.
 ## What it contains
 
 - Cellular-automata cave, 56×56, largest-region cull so every tile is reachable.
+- Wall face/buried classification with stroked contours — see [[Visual Treatments]].
 - Bresenham LOS field of view, radius 8, with explored-tile memory.
 - Energy scheduler — see [[Tick Scheduler]].
 - BFS pathing that routes around bodies rather than through them.

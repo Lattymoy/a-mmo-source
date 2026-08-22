@@ -25,6 +25,29 @@ comparison, not as candidates.
 Note the split this creates with [[Biomes]]: `board` is a *treatment* choice.
 Obstacle colour still comes from the biome.
 
+### Walls are geometry
+
+**Status:** `STATED` — obstacles should angle correctly to form geometry like walls.
+`BUILT` 2026-08-22.
+
+A wall tile touching open floor is a **face** — the surface you can see. Faces
+connect to adjacent faces on four bits (N/E/S/W), so a chamber's contour draws
+itself with real corners, tees and ends. Wall tiles with no floor around them
+are **buried rock** and render recessive at 0.30 alpha.
+
+**Faces are stroked, not lettered.** Box-drawing characters were tried first and
+rejected on evidence: they only tile in a terminal, where the cell is about 0.6
+as wide as it is tall. On a square grid at 0.78em the strokes never reach the
+cell edge and the wall reads as dashes. Stroking centre-to-edge segments makes
+adjacent faces join exactly on the shared edge.
+
+Verified: 859 segments generated, 0 unmatched — every stroke toward a neighbour
+is met by that neighbour's stroke back, so no contour can break.
+
+This is the first place the project stops being literally ASCII. Glyphs still
+carry floor, flora, monsters and players; walls are drawn. Flag if that split
+becomes a problem.
+
 ## Signature: the arm hush
 
 **Status:** `BUILT` — flagged for review
