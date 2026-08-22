@@ -37,6 +37,29 @@
   .ab.armed .g,.ab.armed .n{color:#9CD8F4}
   .ab.cool{opacity:.32}
   .ab .cd{position:absolute;left:0;bottom:0;height:2px;background:#3E6E8C}
+  #eq{position:absolute;inset:0;display:none;flex-direction:column;
+    background:rgba(5,8,12,.94);padding:18px 16px;overflow:auto}
+  #eq.on{display:flex}
+  #eq h2{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#4A5A66;
+    font-weight:500;margin-bottom:12px}
+  #eqSlots{display:flex;gap:8px;margin-bottom:6px}
+  .slot{flex:1;border:1px solid #1C2830;border-radius:3px;padding:12px 8px;text-align:center}
+  .slot .lab{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:#4A5A66}
+  .slot .val{font-size:24px;color:#E8C87A;line-height:1.3;min-height:31px}
+  .slot .val.empty{color:#243038}
+  #eqStat{display:flex;gap:16px;margin:14px 0 16px;font-size:10px;
+    letter-spacing:.14em;text-transform:uppercase;color:#5C6E7A}
+  #eqStat b{color:#D8E4EC;font-weight:500}
+  #eqList{display:flex;flex-direction:column;gap:4px}
+  .row{display:flex;align-items:center;gap:12px;padding:11px 12px;
+    border:1px solid #17222A;border-radius:3px;background:#0A0E12;color:#8A9AA6;
+    font:inherit;font-size:11px;text-align:left}
+  .row.on{border-color:#3E6E8C;background:#0E1A22;color:#9CD8F4}
+  .row .g{font-size:19px;width:20px;text-align:center;color:#E8C87A}
+  .row .n{flex:1;letter-spacing:.06em}
+  .row .s{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#4A5A66}
+  .row:disabled{opacity:.4}
+  #eqClose{margin-top:18px;align-self:flex-start}
   #dead{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
     background:rgba(5,7,10,.86);color:#C4553A;font-size:12px;letter-spacing:.2em;text-transform:uppercase}
 </style>
@@ -49,6 +72,7 @@
   <span class="stat">T <b id="clk">0</b></span>
   <span class="stat" id="inv">— — —</span>
   <span class="sp"></span>
+  <button class="tog" id="bEq">gear</button>
   <button class="tog" id="bLvl">lvl+</button>
   <button class="tog" id="bBiome">uncorrupt</button>
   <button class="tog" id="bTheme">board</button>
@@ -59,6 +83,16 @@
 <div id="wrap">
   <canvas id="c"></canvas>
   <div id="log"></div>
+  <div id="eq">
+    <h2>Equipment</h2>
+    <div id="eqSlots">
+      <div class="slot"><div class="lab">off hand</div><div class="val" id="slotOff">—</div></div>
+      <div class="slot"><div class="lab">main hand</div><div class="val" id="slotMain">—</div></div>
+    </div>
+    <div id="eqStat"><span>ATK <b id="eqAtk">3</b></span><span>DEF <b id="eqDef">0</b></span></div>
+    <div id="eqList"></div>
+    <button class="tog" id="eqClose">close</button>
+  </div>
   <div id="dead">dead — tap new</div>
 </div>
 
@@ -179,11 +213,11 @@ const GROUND = {
   fiber:   {g:'"', name:'fiber',   cls:'flora', traits:'fibrous'},
   resin:   {g:'%', name:'resin',   cls:'flora', traits:'resinous'},
   crystal: {g:'*', name:'crystal', cls:'flora', traits:'brittle'},
-  sword:   {g:'/', name:'sword',   cls:'gear'},
-  shield:  {g:'c', name:'shield',  cls:'gear'},
-  bow:     {g:'}', name:'bow',     cls:'gear'},
-  daggerL: {g:'<', name:'dagger',  cls:'gear'},
-  daggerR: {g:'>', name:'dagger',  cls:'gear'},
+  sword:   {g:'/', name:'sword',    cls:'gear', slot:'main', atk:3},
+  bow:     {g:'}', name:'bow',      cls:'gear', slot:'main', atk:3, twoHand:true, ranged:true},
+  daggerR: {g:'>', name:'dagger',   cls:'gear', slot:'main', atk:2},
+  daggerL: {g:'<', name:'dagger',   cls:'gear', slot:'off',  atk:2},
+  shield:  {g:'c', name:'shield',   cls:'gear', slot:'off',  def:2},
 };
 const FLORA_KEYS = Object.keys(GROUND).filter(k=>GROUND[k].cls==='flora');
 const GEAR_KEYS  = Object.keys(GROUND).filter(k=>GROUND[k].cls==='gear');
@@ -203,18 +237,18 @@ function scatterGround(open){
 
 /* ───────────────────────── entities ───────────────────────── */
 const KINDS = {
-  k: {name:'kobold', hp:6,  spd:90,  dmg:[1,3], sight:9},
-  r: {name:'rat',    hp:3,  spd:70,  dmg:[1,2], sight:7},
-  T: {name:'troll',  hp:16, spd:160, dmg:[4,7], sight:8},
+  husk:  {g:'\u25A1', name:'husk',  hp:5,  spd:85,  dmg:[1,3], sight:9},
+  // heavy variant is NOT stated — placeholder glyph, flag if wrong
+  heavy: {g:'\u25A3', name:'heavy', hp:16, spd:160, dmg:[4,7], sight:8},
 };
 function spawn(open){
   ents = [];
   const [px,py] = open[ri(open.length)];
   player = {x:px,y:py,glyph:'@',lvl:1,hp:20,max:20,spd:100,next:0,you:true,
-            ax:px,ay:py,at:-9999, inv:{}};
+            ax:px,ay:py,at:-9999, inv:{}, eq:{main:null, off:null}};
   ents.push(player);
 
-  const pool = ['r','r','r','k','k','T'];
+  const pool = ['husk','husk','husk','husk','heavy'];
   const n = 16;
   let tries = 0;
   while(ents.length < n+1 && tries++ < 4000){
@@ -222,11 +256,38 @@ function spawn(open){
     if(dist(x,y,px,py) < 12) continue;
     if(ents.some(e=>e.x===x&&e.y===y)) continue;
     const k = pool[ri(pool.length)], K = KINDS[k];
-    ents.push({x,y,glyph:k,kind:k,hp:K.hp,max:K.hp,spd:K.spd,next:0,
+    ents.push({x,y,glyph:K.g,kind:k,hp:K.hp,max:K.hp,spd:K.spd,next:0,
                ax:x,ay:y,at:-9999});
   }
 }
 const entAt=(x,y)=>ents.find(e=>e.hp>0&&e.x===x&&e.y===y);
+
+/* Weapons raise Attack, a shield raises Defense. Base 3 so an unarmed player
+   still hits for something. */
+const BASE_ATK = 3;
+function atkOf(p){
+  let a = BASE_ATK;
+  for(const k of [p.eq.main, p.eq.off]) if(k && GROUND[k].atk) a += GROUND[k].atk;
+  return a;
+}
+function defOf(p){
+  let d = 0;
+  for(const k of [p.eq.main, p.eq.off]) if(k && GROUND[k].def) d += GROUND[k].def;
+  return d;
+}
+function equip(k){
+  const G = GROUND[k];
+  if(!G || G.cls!=='gear') return;
+  const slot = G.slot;
+  if(player.eq[slot] === k){ player.eq[slot] = null; }      // tap again to remove
+  else {
+    player.eq[slot] = k;
+    if(G.twoHand) player.eq.off = null;
+    else if(slot==='off' && player.eq.main && GROUND[player.eq.main].twoHand)
+      player.eq.main = null;
+  }
+  hud();
+}
 
 /* ───────────────────────── fov / los ───────────────────────── */
 function los(x0,y0,x1,y1){
@@ -304,9 +365,11 @@ const ABIL = [
      const arc = dx&&dy ? [[dx,dy],[dx,0],[0,dy]]
                         : dx ? [[dx,-1],[dx,0],[dx,1]] : [[-1,dy],[0,dy],[1,dy]];
      let hit=0;
+     lungeAt(player, x, y, false); swing(player);
      for(const [ax,ay] of arc){
+       slashAt(player.x, player.y, player.x+ax, player.y+ay);
        const e = entAt(player.x+ax, player.y+ay);
-       if(e && !e.you){ damage(e, 2+ri(3)); hit++ }
+       if(e && !e.you){ damage(e, atkOf(player)+ri(3)); hit++ }
      }
      say(hit ? `cleave — ${hit} hit` : 'cleave — nothing');
      return true }},
@@ -319,8 +382,12 @@ const ABIL = [
        if(!vis[idx(x,y)]) continue;
        t.push([x,y]);
      } return t },
-   fire(x,y){ const e=entAt(x,y);
-     if(e&&!e.you){ damage(e, 2+ri(4)); say(`hurl — ${KINDS[e.kind].name}`) }
+   fire(x,y){
+     const bow = player.eq.main && GROUND[player.eq.main].ranged;
+     lungeAt(player, x, y, true); swing(player);
+     shotAt(player.x, player.y, x, y, bow ? '\u2192' : '\u00b7');
+     const e=entAt(x,y);
+     if(e&&!e.you){ damage(e, atkOf(player)+ri(3)); say(`hurl — ${KINDS[e.kind].name}`) }
      else say('hurl — miss');
      return true }},
 
@@ -340,6 +407,28 @@ const ABIL = [
      return true }},
 ];
 const cooldown = {};
+
+/* ───────────────────────── motion & fx ─────────────────────────
+   Melee lunges INTO the target and settles back. Ranged recoils the other way.
+   Both read as intent even when the damage number is off screen. */
+let fx = [];
+const LUNGE_MS = 190, SLASH_MS = 170, SHOT_MS = 190;
+
+function lungeAt(e, tx, ty, ranged){
+  const dx = tx-e.x, dy = ty-e.y;
+  const m = Math.hypot(dx,dy) || 1;
+  e.lg = {dx:dx/m, dy:dy/m, amt: ranged ? -0.22 : 0.40,
+          t0: performance.now(), dur: LUNGE_MS};
+}
+function slashAt(ax, ay, tx, ty){
+  fx.push({type:'slash', x:tx, y:ty, ang:Math.atan2(ty-ay, tx-ax),
+           t0:performance.now(), dur:SLASH_MS});
+}
+function shotAt(ax, ay, tx, ty, g){
+  fx.push({type:'shot', x0:ax, y0:ay, x1:tx, y1:ty, g:g||'\u00b7',
+           t0:performance.now(), dur:SHOT_MS});
+}
+function swing(e){ e.sw = {t0:performance.now(), dur:LUNGE_MS} }
 
 /* ───────────────────────── actions ───────────────────────── */
 let queued = null;   // {type:'ability'|'attack', ...}
@@ -364,7 +453,8 @@ function playerAct(){
     if(q.type==='attack'){
       const e = entAt(q.x,q.y);
       if(e && !e.you && dist(e.x,e.y,player.x,player.y)<=1){
-        damage(e, 3+ri(3)); say(`hit ${KINDS[e.kind].name}`);
+        lungeAt(player, e.x, e.y, false); slashAt(player.x,player.y,e.x,e.y); swing(player);
+        damage(e, atkOf(player)+ri(3)); say(`hit ${KINDS[e.kind].name}`);
         return 120;
       }
       return 0;
@@ -380,7 +470,8 @@ function playerAct(){
     const e = entAt(x,y);
     if(e && !e.you){
       path = [];
-      damage(e, 3+ri(3)); say(`hit ${KINDS[e.kind].name}`);
+      lungeAt(player, e.x, e.y, false); slashAt(player.x,player.y,e.x,e.y); swing(player);
+      damage(e, atkOf(player)+ri(3)); say(`hit ${KINDS[e.kind].name}`);
       return 120;
     }
     path.shift();
@@ -395,8 +486,12 @@ function monsterAct(m){
   const d = dist(m.x,m.y,player.x,player.y);
   const sees = d<=K.sight && los(m.x,m.y,player.x,player.y);
   if(sees && d<=1){
-    damage(player, K.dmg[0]+ri(K.dmg[1]-K.dmg[0]+1));
-    say(`${K.name} hits you`);
+    lungeAt(m, player.x, player.y, false);
+    slashAt(m.x, m.y, player.x, player.y);
+    const raw = K.dmg[0]+ri(K.dmg[1]-K.dmg[0]+1);
+    const dealt = Math.max(1, raw - defOf(player));
+    damage(player, dealt);
+    say(`${K.name} hits you${dealt<raw ? ' \u2014 blocked '+(raw-dealt) : ''}`);
     return K.spd;
   }
   if(sees){
@@ -541,10 +636,22 @@ function resize(){
 }
 
 function pos(e,now){
-  const t = Math.min(1,(now-e.at)/MOVE_MS);
-  if(t>=1) return [e.x,e.y];
-  const k = t*t*(3-2*t);
-  return [e.ax+(e.x-e.ax)*k, e.ay+(e.y-e.ay)*k];
+  let x = e.x, y = e.y;
+  const t = (now-e.at)/MOVE_MS;
+  if(t < 1){ const k = t*t*(3-2*t); x = e.ax+(e.x-e.ax)*k; y = e.ay+(e.y-e.ay)*k }
+  if(e.lg){
+    const u = (now-e.lg.t0)/e.lg.dur;
+    if(u >= 1) e.lg = null;
+    else { const p = Math.sin(u*Math.PI)*e.lg.amt; x += e.lg.dx*p; y += e.lg.dy*p }
+  }
+  return [x,y];
+}
+// 0 at rest, 1 at full swing — drives the weapon's arc
+function swingT(e,now){
+  if(!e.sw) return 0;
+  const u = (now-e.sw.t0)/e.sw.dur;
+  if(u >= 1){ e.sw = null; return 0 }
+  return Math.sin(u*Math.PI);
 }
 
 function draw(now){
@@ -623,20 +730,38 @@ function draw(now){
     ctx.fillStyle = e.you ? T.you : T.mon;
     if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = ctx.fillStyle }
     if(e.you){
-      // the player is a RING; the level sits inside it
+      /* c○/   ○}   <○>
+         Off hand left, main hand right, ring between. The ring shrinks when
+         something is held so all three fit one thumb-sized cell. */
+      const held = (e.eq.main?1:0) + (e.eq.off?1:0);
+      const r  = held ? TS*0.28 : TS*0.40;
+      const lf = held ? TS*0.32 : TS*0.44;
       ctx.strokeStyle = T.you;
-      ctx.lineWidth = Math.max(1.4, TS*0.075);
+      ctx.lineWidth = Math.max(1.3, TS*0.07);
       ctx.beginPath();
-      ctx.arc(sx, sy, TS*0.40, 0, Math.PI*2);
+      ctx.arc(sx, sy, r, 0, Math.PI*2);
       ctx.stroke();
-      const s = String(e.lvl);
+
+      const lab = String(e.lvl);
       ctx.save();
-      ctx.font = `${Math.floor(TS*0.44)}px ui-monospace, Menlo, Consolas, monospace`;
-      if(s.length > 1){
-        ctx.translate(sx, sy);
-        ctx.scale(0.66, 1);
-        ctx.fillText(s, 0, 0);
-      } else ctx.fillText(s, sx, sy);
+      ctx.font = `${Math.floor(lf)}px ui-monospace, Menlo, Consolas, monospace`;
+      if(lab.length > 1){ ctx.translate(sx,sy); ctx.scale(0.66,1); ctx.fillText(lab,0,0) }
+      else ctx.fillText(lab, sx, sy);
+      ctx.restore();
+
+      const sw = swingT(e, now);
+      ctx.save();
+      ctx.font = `${Math.floor(TS*0.46)}px ui-monospace, Menlo, Consolas, monospace`;
+      ctx.fillStyle = T.gear;
+      for(const [slot, side] of [['off',-1],['main',1]]){
+        const k = e.eq[slot];
+        if(!k) continue;
+        ctx.save();
+        ctx.translate(sx + side*TS*0.36, sy);
+        if(sw) ctx.rotate(side * sw * 1.1);          // the weapon swings, not the player
+        ctx.fillText(GROUND[k].g, 0, 0);
+        ctx.restore();
+      }
       ctx.restore();
     } else ctx.fillText(e.glyph, sx, sy);
     ctx.shadowBlur = 0;
@@ -648,6 +773,35 @@ function draw(now){
       ctx.fillRect(ex*TS-ox+3, ey*TS-oy+TS-3, bw, 1.5);
     }
   }
+
+  // fx over entities
+  fx = fx.filter(f => now - f.t0 < f.dur);
+  for(const f of fx){
+    const u = (now - f.t0)/f.dur;
+    if(f.type==='slash'){
+      if(!vis[idx(f.x,f.y)]) continue;
+      const cx = f.x*TS-ox+TS/2, cy = f.y*TS-oy+TS/2;
+      ctx.globalAlpha = Math.sin((1-u)*Math.PI/2) * dim;
+      ctx.strokeStyle = T.gear;
+      ctx.lineWidth = Math.max(1.5, TS*0.09);
+      ctx.lineCap = 'round';
+      const a0 = f.ang - 0.85 + u*1.7;
+      ctx.beginPath();
+      ctx.arc(cx, cy, TS*0.42, a0, a0 + 0.9);
+      ctx.stroke();
+    } else if(f.type==='shot'){
+      const px = f.x0 + (f.x1-f.x0)*u, py = f.y0 + (f.y1-f.y0)*u;
+      if(!inB(Math.round(px),Math.round(py)) || !vis[idx(Math.round(px),Math.round(py))]) continue;
+      ctx.globalAlpha = dim;
+      ctx.fillStyle = T.gear;
+      ctx.save();
+      ctx.translate(px*TS-ox+TS/2, py*TS-oy+TS/2);
+      ctx.rotate(Math.atan2(f.y1-f.y0, f.x1-f.x0));
+      ctx.fillText(f.g, 0, 0);
+      ctx.restore();
+    }
+  }
+  ctx.globalAlpha = 1;
 
   if(path.length && !armed){
     ctx.globalAlpha = 0.30;
@@ -682,6 +836,40 @@ function bar(){
     barEl.appendChild(b);
   }
 }
+function drawEq(){
+  const setSlot = (id, k) => {
+    const el = document.getElementById(id);
+    el.textContent = k ? GROUND[k].g : '\u2014';
+    el.className = 'val' + (k ? '' : ' empty');
+  };
+  setSlot('slotOff',  player.eq.off);
+  setSlot('slotMain', player.eq.main);
+  document.getElementById('eqAtk').textContent = atkOf(player);
+  document.getElementById('eqDef').textContent = defOf(player);
+
+  const list = document.getElementById('eqList');
+  list.innerHTML = '';
+  const carried = Object.entries(player.inv).filter(([k,n]) => n>0 && GROUND[k].cls==='gear');
+  if(!carried.length){
+    const d = document.createElement('div');
+    d.className = 'row';
+    d.textContent = 'Nothing carried. Gather gear off the floor.';
+    list.appendChild(d);
+    return;
+  }
+  for(const [k] of carried){
+    const G = GROUND[k];
+    const on = player.eq[G.slot] === k;
+    const b = document.createElement('button');
+    b.className = 'row' + (on ? ' on' : '');
+    b.innerHTML = `<span class="g">${G.g}</span><span class="n">${G.name}</span>` +
+      `<span class="s">${G.atk ? '+'+G.atk+' atk' : ''}${G.def ? '+'+G.def+' def' : ''}` +
+      `${G.twoHand ? ' \u00b7 two-hand' : ''}</span>`;
+    b.onclick = ()=>{ equip(k); drawEq() };
+    list.appendChild(b);
+  }
+}
+
 function hud(){
   document.getElementById('hp').textContent = Math.max(0,player.hp);
   document.getElementById('lvl').textContent = player.lvl;
@@ -689,6 +877,7 @@ function hud(){
   const carried = Object.entries(player.inv).filter(([,n])=>n>0)
     .map(([k,n])=>`${GROUND[k].g}${n}`).join(' ');
   document.getElementById('inv').textContent = carried || '—';
+  if(document.getElementById('eq').classList.contains('on')) drawEq();
   bar();
 }
 function drawLog(){
@@ -722,10 +911,12 @@ function restart(){
   clock=0; waiting=false; dead=false; path=[]; armed=null; valid=null; queued=null; logs=[];
   for(const k in cooldown) delete cooldown[k];
   document.getElementById('dead').style.display='none';
+  document.getElementById('eq').classList.remove('on');
   computeFOV(); hud(); say(`${n} open tiles — ${ents.length-1} hostiles`);
   resize();
 }
 
+document.getElementById('eq').addEventListener('pointerdown', ev=>ev.stopPropagation());
 cv.addEventListener('pointerdown', ev=>{
   const r = cv.getBoundingClientRect();
   if(cam==='tactical'){ cam='close'; document.getElementById('bCam').textContent='close'; resize(); return }
@@ -738,6 +929,13 @@ cv.addEventListener('pointerdown', ev=>{
 document.getElementById('bLvl').onclick = ()=>{
   player.lvl = player.lvl >= LVL_MAX ? 1 : player.lvl + 1;
   hud();
+};
+document.getElementById('bEq').onclick = ()=>{
+  document.getElementById('eq').classList.add('on');
+  drawEq();
+};
+document.getElementById('eqClose').onclick = ()=>{
+  document.getElementById('eq').classList.remove('on');
 };
 document.getElementById('bBiome').onclick = e=>{
   const k = Object.keys(BIOMES);

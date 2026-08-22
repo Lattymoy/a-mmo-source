@@ -37,17 +37,52 @@ Flora keeps the biome tint. It grew there.
 
 ## Daggers
 
-**Status:** `OPEN`
+**Status:** `STATED` — two daggers, a dual-wield pair. `<` off hand, `>` main hand.
 
-`<` and `>` are both stated as daggers. Whether that is one item with two
-orientations, a dual-wield pair, or two distinct daggers is not stated.
-[[tap-grid]] carries them as two entries so the question stays visible rather
-than being silently resolved.
+## How equipped gear reads
+
+**Status:** `STATED`
+
+```
+c○/     shield and sword
+ ○}     bow
+<○>     paired daggers
+```
+
+**Off hand renders left, main hand right, the ring between.** The ring shrinks
+from 0.40 to 0.28 tile radius when anything is held, so all three fit one
+thumb-sized cell. That is the cost of the layout and it lands on the level
+digit — the thing already tightest at small sizes.
+
+The bow is two-handed: equipping it clears the off hand, and equipping anything
+off-hand clears it. Verified in probe.
+
+## Stats
+
+**Status:** `STATED` — weapons increase Attack, a shield increases Defense.
+
+Base attack is 3 so an unarmed player still hits. Values below are tuning, not
+design:
+
+| Item | Slot | Effect |
+| --- | --- | --- |
+| sword `/` | main | +3 atk |
+| bow `}` | main, two-hand | +3 atk |
+| dagger `>` | main | +2 atk |
+| dagger `<` | off | +2 atk |
+| shield `c` | off | +2 def |
+
+Defense subtracts from incoming damage with a floor of 1, and the log says how
+much was blocked. Paired daggers total +4 attack against a sword's +3 — the pair
+out-damages the single blade and gives up all defense. Nothing yet makes that a
+real trade, because tick cost does not vary by weapon. See [[Open Questions]].
 
 ## Prototype state
 
 Gear scatters on open floor and is picked up with the same `gather` verb as
-flora — verified, all eight ground kinds spawn, target, and land in inventory.
-Nothing is equippable yet, and gear has no stats.
+flora. Equipment screen opens from `gear` in the top bar: two slots, live
+ATK/DEF, tap an item to equip, tap again to remove.
+
+Related: [[Player Representation]] · [[Combat Presentation]] · [[Progression]] · [[Biomes]]
 
 Related: [[Player Representation]] · [[Progression]] · [[Biomes]]

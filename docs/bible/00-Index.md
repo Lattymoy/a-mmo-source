@@ -29,6 +29,7 @@ Every page carries a **Status** line using one of:
 - [[Platforms]]
 - [[Player Representation]]
 - [[Equipment]]
+- [[Combat Presentation]]
 
 ## Prototypes
 

@@ -32,6 +32,11 @@ request.
   up. That is all. They are a placeholder for the "craft gear"
   pillar in [[Premise]], not a designed trait system.
 - **Monster AI is minimal.** See player → step toward or attack. Otherwise wander.
+- **Enemies are `□` husks.** The base enemy glyph is stated; "husk" is Raum's
+  own word, taken from project-raum's hub arc. The heavier `▣` variant is a
+  placeholder — glyph and existence both unstated.
+- **Gear has stats and equips**, with lunge, slash, projectile and weapon swing
+  — see [[Equipment]] and [[Combat Presentation]].
 - Sixteen hostiles, fixed. No spawning, no progression, no death state beyond a
   screen.
 - Inline script, not ES modules. Deliberate for a single-file prototype; will not

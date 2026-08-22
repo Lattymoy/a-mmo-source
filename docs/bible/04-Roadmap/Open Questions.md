@@ -31,10 +31,12 @@
 10. **Two-digit legibility.** The condense call in [[Player Representation]] is
     built but not looked at on a real phone. Find the level where it stops
     reading.
-11. **Daggers.** `<` and `>` both stated as daggers — one item two orientations,
-    a pair, or two items. See [[Equipment]].
-12. **Equipping.** Gear exists on the floor and in inventory. What wielding a
-    sword changes — damage, tick cost, targeting shape — is not stated.
+11. **Weapon tick cost.** Weapons change Attack only. Nothing makes a heavy
+    weapon slower or a dagger faster, so paired daggers strictly beat a sword on
+    damage and the choice is not a trade. The [[Tick Scheduler]] was built to
+    carry exactly this. Not stated — do not assume it.
+12. **The heavy enemy.** Only the base `□` husk is stated. Whether larger
+    enemies exist below boss scale, and what they look like, is not.
 13. **What levelling does.** Max 25 is stated. What a level grants — stats,
     ability slots, gear tier access — is not.
 14. **Band vs. zone.** Raum's three bands are distance-banded in project-raum.
