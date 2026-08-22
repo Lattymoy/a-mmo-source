@@ -1,4 +1,7 @@
-/* THE CAPE — the character's primary visual equipment.
+/* CHARACTER PRESENTATION — everything the wearer is made of besides the ring:
+   the cape, the hand nubs, breathing, and gait.
+
+   ── THE CAPE — the character's primary visual equipment.
 
    A mantle, not a tail. It anchors on an arc across the shoulders, wraps around
    the body, spreads wider than the wearer, and trails to a scalloped hem.
@@ -192,6 +195,47 @@ export function drawCape(ctx, e, ox, oy, TS, col, alpha, breath, bg){
     ctx.stroke();
   }
   ctx.globalAlpha = alpha;
+}
+
+/* ── THE HANDS
+   Two floating nubs carried in FRONT of the wearer — the exact opposite end of
+   the body from the cape, so together they state which way the character is
+   facing without any sprite rotation. They swing with the gait, opposite to one
+   another, which is what makes a walk read as a walk.
+
+   Pure geometry, kept separate from drawing so it can be asserted. */
+export const HAND_FWD = 0.44;   // tiles ahead of centre — far enough that the
+                                // nubs clear the body ring at every level width
+export const HAND_LAT = 0.26;   // tiles to either side
+export const HAND_R   = 0.10;   // nub radius in tiles
+
+export function handPositions(e, ax, ay, gait){
+  const fx = e.face.x, fy = e.face.y;
+  const px = -fy, py = fx;                     // perpendicular to facing
+  return [-1, 1].map(side => {
+    const swing = gait * 0.07 * side;          // one hand leads, the other trails
+    return [
+      ax + fx * (HAND_FWD + swing) + px * HAND_LAT * side,
+      ay + fy * (HAND_FWD + swing) + py * HAND_LAT * side,
+    ];
+  });
+}
+
+export function drawHands(ctx, e, ax, ay, ox, oy, TS, col, alpha, breath, bg, gait){
+  if(!e.face) return;
+  const r = TS * HAND_R * breath;
+  for(const [hx, hy] of handPositions(e, ax, ay, gait)){
+    const sx = hx * TS - ox + TS/2, sy = hy * TS - oy + TS/2;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.strokeStyle = bg;
+    ctx.lineWidth = Math.max(1.5, TS * 0.075);   // same keyline as the cloth
+    ctx.stroke();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = col;
+    ctx.fill();
+  }
 }
 
 /* Idle breathing. Slow, small, phase-offset per wearer by position so a crowd

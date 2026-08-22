@@ -82,6 +82,33 @@ frames and asserts no node ever enters the ring.
 it takes the treatment's colour and **never the biome tint** — see [[Biomes]].
 This is the natural home for faction or material colour once either exists.
 
+## The hands
+
+**Status:** `STATED` — two little floating circles in front of the character,
+nubs standing in for left and right hands.
+
+They sit 0.44 tiles ahead of centre and 0.26 to either side, and they **swing in
+opposition through a step** — one leads while the other trails. That opposition
+is what makes a walk read as a walk rather than a slide.
+
+Together with the cape they do the real work: **hands lead, cloth trails**, so
+the character's facing is unmistakable from the silhouette alone, with no sprite
+rotation and no directional art. Gated by a test asserting the hands sit forward
+of centre and the cape's tip sits behind it.
+
+Geometry is a pure function (`handPositions`) kept separate from drawing, so
+these are assertions rather than opinions: both hands forward, both clear of the
+body ring at every level width, never overlapping each other, always opposing
+the cape.
+
+### Conflict to resolve
+
+Equipped weapons still render **fixed left and right of the ring** per the
+stated `c○/` layout, while the hands rotate with facing. Walk north and your
+sword is on the east side while your hands point north. Nothing is broken, but
+a weapon should presumably be *in* a hand. Not changed, because the layout is
+stated — see [[Open Questions]].
+
 ## Idle breathing
 
 Ring radius and cape width scale on a slow sine, ±4.5%, phase-offset per wearer

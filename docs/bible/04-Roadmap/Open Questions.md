@@ -39,13 +39,17 @@
     enemies exist below boss scale, and what they look like, is not.
 13. **Cape weight on screen.** ~1.5 tiles of cloth per player. Untested with a
     full party in view — see [[Character Presentation]].
-14. **What levelling does.** Max 25 is stated. What a level grants — stats,
+14. **Weapons vs. hands.** `c○/` fixes gear left and right of the ring; the new
+    hand nubs rotate with facing. Should a weapon be drawn in the leading hand
+    instead? Changing it would alter a stated layout, so it has not been
+    touched. See [[Character Presentation]].
+15. **What levelling does.** Max 25 is stated. What a level grants — stats,
     ability slots, gear tier access — is not.
-15. **Band vs. zone.** Raum's three bands are distance-banded in project-raum.
+16. **Band vs. zone.** Raum's three bands are distance-banded in project-raum.
     This game has missions into procedural zones ([[World Structure]]). Whether a
     zone is a band, sits inside one, or is unrelated is not stated. The
     [[Biomes]] palettes borrow band names for demonstration only.
-16. **Zone generation.** "Procedural zone-based areas" is stated. What varies
+17. **Zone generation.** "Procedural zone-based areas" is stated. What varies
    between zones — biome, layout, hazard, boss — is not.
 
 ## Resolved since

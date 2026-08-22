@@ -158,8 +158,9 @@ group('entities');
 /* ── cape ──────────────────────────────────────────────────────────────── */
 group('cape');
 {
-  const { initCape, updateCape, RIBS, RIB_N, SHOULDER, breathT, gaitT } =
-    await import('../src/render/cape.js');
+  const { initCape, updateCape, handPositions, RIBS, RIB_N, SHOULDER,
+          HAND_FWD, HAND_R, breathT, gaitT } =
+    await import('../src/render/character.js');
   // ribs vary in length (curl + centre bias), so reach is measured per rib
   const reachOf = seg => SHOULDER + (RIB_N - 1) * seg;
 
@@ -229,6 +230,42 @@ group('cape');
   for(let f = 0; f < 2000; f++){ const b = breathT(e, f*16.67); lo = Math.min(lo,b); hi = Math.max(hi,b) }
   check('breath stays subtle', lo > 0.94 && hi < 1.06, `${lo.toFixed(3)}..${hi.toFixed(3)}`);
   check('gait is 0 at rest', gaitT({ at: -9999 }, 0, 65) === 0);
+}
+
+/* ── hands ─────────────────────────────────────────────────────────────── */
+group('hands');
+{
+  const { initCape, updateCape, handPositions, HAND_FWD, HAND_R, SHOULDER } =
+    await import('../src/render/character.js');
+
+  const e = { x: 5, y: 5, at: -9999 };
+  initCape(e);
+  // drive east so facing is unambiguous
+  let ax = 5, ay = 5;
+  for(let f = 0; f < 200; f++){ ax += 0.05; updateCape(e, ax, ay, f*16.67, 16.67) }
+
+  const [L, R] = handPositions(e, ax, ay, 0);
+  const ahead = p => (p[0]-ax)*e.face.x + (p[1]-ay)*e.face.y;
+  check('both hands are in FRONT', ahead(L) > 0 && ahead(R) > 0,
+        `${ahead(L).toFixed(2)}, ${ahead(R).toFixed(2)}`);
+
+  const clear = p => Math.hypot(p[0]-ax, p[1]-ay) - HAND_R;
+  check('hands clear the body ring', clear(L) > 0.40 && clear(R) > 0.40,
+        `${clear(L).toFixed(3)}, ${clear(R).toFixed(3)}`);
+
+  const sep = Math.hypot(L[0]-R[0], L[1]-R[1]);
+  check('hands do not overlap each other', sep > HAND_R * 2, `${sep.toFixed(3)}`);
+
+  // hands must sit opposite the cape, or facing reads ambiguously
+  const mid = e.cape[(e.cape.length/2)|0];
+  const tip = mid[mid.length-1];
+  check('hands oppose the cape', ahead([tip.x, tip.y]) < 0,
+        `cape at ${ahead([tip.x, tip.y]).toFixed(2)}`);
+
+  // they swing in opposition through a step
+  const [L2, R2] = handPositions(e, ax, ay, 1);
+  const dL = ahead(L2) - ahead(L), dR = ahead(R2) - ahead(R);
+  check('hands swing in opposition', dL * dR < 0, `${dL.toFixed(3)} vs ${dR.toFixed(3)}`);
 }
 
 report();
