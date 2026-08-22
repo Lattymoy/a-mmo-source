@@ -207,16 +207,23 @@ export function drawCape(ctx, e, ox, oy, TS, col, alpha, breath, bg){
    stop, and drifts on its own idle cycle. Pinned at a fixed offset they read as
    painted-on dots; floating, they read as separate things travelling with the
    character. */
-export const HAND_FWD = 0.44;   // tiles ahead of centre — far enough that the
-                                // nubs clear the body ring at every level width
-export const HAND_LAT = 0.26;   // tiles to either side
+/* Detachment is the whole point, so the gap is a named budget rather than a
+   number that happens to work. Both the ring and the nubs carry a heavy
+   keyline that eats into the space between them, so the nominal gap has to
+   cover that too or they read as welded on. */
+export const BODY_R    = 0.40;  // widest the ring ever draws (unarmed)
+export const KEYLINE   = 0.075; // stroke bleed, both edges combined
+export const HAND_GAP  = 0.13;  // clear space the eye should actually see
+
+export const HAND_FWD = 0.66;   // tiles ahead of centre
+export const HAND_LAT = 0.24;   // tiles to either side
 export const HAND_R   = 0.10;   // nub radius in tiles
 const HAND_STIFF = 0.20;        // pull toward the target
 const HAND_DAMP  = 0.87;        // low enough to overshoot, high enough to settle
 const HAND_DRIFT = 0.032;       // independent idle float, tiles
-const HAND_LEASH = 0.55;        // never trail further than this from the body
-export const HAND_MIN = 0.52;        // nor drift closer — a nub inside the ring would
-                                // sit on the level digit
+const HAND_LEASH = 0.88;        // never trail further than this from the body
+// nor drift closer: body + its keyline + the visible gap + the nub + its keyline
+export const HAND_MIN = BODY_R + KEYLINE + HAND_GAP + HAND_R;
 
 /* The ideal position — where a rigidly-attached hand would sit. Pure, so it can
    be asserted, and so the spring has something to chase. */

@@ -236,7 +236,8 @@ group('cape');
 group('hands');
 {
   const { initCape, updateCape, initHands, updateHands, handTargets,
-          HAND_R, HAND_LEASH, HAND_MIN } = await import('../src/render/character.js');
+          HAND_R, HAND_LEASH, HAND_MIN, BODY_R, KEYLINE, HAND_GAP } =
+    await import('../src/render/character.js');
 
   const e = { x: 5, y: 5, at: -9999 };
   initCape(e);
@@ -252,9 +253,12 @@ group('hands');
   check('both hands are in FRONT', ahead(L) > 0 && ahead(R) > 0,
         `${ahead(L).toFixed(2)}, ${ahead(R).toFixed(2)}`);
 
-  const clear = p => Math.hypot(p[0]-ax, p[1]-ay) - HAND_R;
-  check('hands clear the body ring', clear(L) > 0.40 && clear(R) > 0.40,
-        `${clear(L).toFixed(3)}, ${clear(R).toFixed(3)}`);
+  /* The nubs must be visibly DETACHED, not merely non-overlapping. Measured
+     edge to edge with both keylines subtracted, which is what the eye sees. */
+  const gap = p => Math.hypot(p[0]-ax, p[1]-ay) - HAND_R - BODY_R - KEYLINE;
+  check('hands are visibly detached from the body',
+        gap(L) >= HAND_GAP - 1e-9 && gap(R) >= HAND_GAP - 1e-9,
+        `gaps ${gap(L).toFixed(3)}, ${gap(R).toFixed(3)} vs ${HAND_GAP}`);
 
   const sep = Math.hypot(L[0]-R[0], L[1]-R[1]);
   check('hands do not overlap each other', sep > HAND_R * 2, `${sep.toFixed(3)}`);
@@ -265,7 +269,7 @@ group('hands');
         `cape at ${ahead([tip.x, tip.y]).toFixed(2)}`);
 
   // the point of the rework: they must NOT be rigidly attached
-  let maxLag = 0, leashBreak = 0;
+  let maxLag = 0, leashBreak = 0, touching = 0;
   for(let f = 0; f < 400; f++){
     ax += 0.09;                                   // set off at speed
     e.x = Math.round(ax);
@@ -276,10 +280,13 @@ group('hands');
       maxLag = Math.max(maxLag, Math.hypot(e.hands[i].x - t[i][0], e.hands[i].y - t[i][1]));
       const dd = Math.hypot(e.hands[i].x - ax, e.hands[i].y - ay);
       if(dd > HAND_LEASH + 1e-9 || dd < HAND_MIN - 1e-9) leashBreak++;
+      // never, at any point in motion, may a nub touch the body
+      if(dd - HAND_R - BODY_R - KEYLINE < HAND_GAP - 1e-9) touching++;
     }
   }
   check('hands lag the body, not welded to it', maxLag > 0.04, `max lag ${maxLag.toFixed(3)} tiles`);
   check('nubs stay in their shell', leashBreak === 0, `${leashBreak} frames`);
+  check('never touch the body, even mid-motion', touching === 0, `${touching} frames`);
 
   // and they must still settle, or they would jitter forever
   for(let f = 0; f < 600; f++) updateHands(e, ax, ay, (700+f)*16.67, 16.67, 0);

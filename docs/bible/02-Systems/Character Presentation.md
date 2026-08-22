@@ -98,9 +98,26 @@ The target sits 0.44 tiles ahead of centre and 0.26 to either side, and the two
 opposition is what makes a walk read as a walk rather than a slide.
 
 Free-floating needs bounds at both ends. The nubs are held in a **shell**: a
-leash at 0.55 tiles so a dash cannot strand them across the room, and an inner
-floor at 0.52 so idle drift cannot push one over the level digit. Anywhere
-between, they float untouched.
+leash at 0.88 tiles so a dash cannot strand them across the room, and an inner
+floor so they can never reach the body. Anywhere between, they float untouched.
+
+### The gap is a budget, not a number
+
+First pass left 0.02 tiles between nub and ring — technically not overlapping,
+visually welded on, and the heavy keylines on both shapes closed even that.
+The inner floor is now derived rather than guessed:
+
+```
+HAND_MIN = BODY_R + KEYLINE + HAND_GAP + HAND_R
+```
+
+`HAND_GAP` is the clear space the eye should actually see (0.13 tiles);
+`KEYLINE` accounts for the stroke bleeding off both edges. Change the ring's
+size or its stroke and the nubs move out to suit, with no re-tuning.
+
+The suite measures the gap **edge to edge with keylines subtracted** — what the
+eye sees, not what the centres say — and asserts it holds on every frame of
+motion, not just at rest.
 
 Together with the cape they do the real work: **hands lead, cloth trails**, so
 the character's facing is unmistakable from the silhouette alone, with no sprite
