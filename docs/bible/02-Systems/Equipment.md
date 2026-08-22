@@ -49,13 +49,26 @@ c○/     shield and sword
 <○>     paired daggers
 ```
 
-**Off hand renders left, main hand right, the ring between.** The ring shrinks
-from 0.40 to 0.28 tile radius when anything is held, so all three fit one
-thumb-sized cell. That is the cost of the layout and it lands on the level
-digit — the thing already tightest at small sizes.
+**Gear is carried in the hands.** The off hand holds the shield, the main hand
+the weapon, and both ride the floating nubs described in
+[[Character Presentation]].
+
+That means gear inherits the nubs' float, lag and side confinement for free: a
+weapon can never end up behind the wearer, on the wrong side of them, or clashed
+into the other hand. Glyphs rotate with facing, so the `c○/` reading holds in
+every direction — it is **body-relative, not screen-relative**. Face south and
+the shield appears on screen-right, because it is still on the character's own
+left.
+
+The ring keeps its full 0.40 radius now that nothing crowds its sides, so the
+level digit gets all its room back — the earlier shrink to 0.28 is gone.
 
 The bow is two-handed: equipping it clears the off hand, and equipping anything
-off-hand clears it. Verified in probe.
+off-hand clears it. It currently draws in the main hand only; a two-hander
+spanning both nubs is not built.
+
+A hand shows **either a nub or what it holds, never both** — at thumb tile size
+a glyph and a dot in the same place is mush.
 
 ## Stats
 

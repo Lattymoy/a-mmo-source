@@ -57,6 +57,11 @@ Browser boot is verified separately with Playwright — canvas sizes, ability ba
 renders, arm lights up, a tap outside the lit set disarms, equipment panel
 opens, zero console errors.
 
+## Dev hooks
+
+`window.__GEAR__` set before load starts the player equipped, so visual probes
+can inspect held gear without hunting for floor drops. Never set in normal play.
+
 ## Known state
 
 Carried over unchanged from the prototype:

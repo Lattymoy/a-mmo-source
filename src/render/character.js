@@ -318,10 +318,14 @@ export function updateHands(e, ax, ay, now, dt, gait){
   }
 }
 
-export function drawHands(ctx, e, ox, oy, TS, col, alpha, breath, bg){
+/* A hand shows either a nub or what it is holding, never both — at thumb tile
+   size a glyph and a dot in the same spot is mush. `held` is [off, main]. */
+export function drawHands(ctx, e, ox, oy, TS, col, alpha, breath, bg, held){
   if(!e.hands) return;
   const r = TS * HAND_R * breath;
-  for(const h of e.hands){
+  for(let i = 0; i < e.hands.length; i++){
+    if(held && held[i]) continue;
+    const h = e.hands[i];
     const sx = h.x * TS - ox + TS/2, sy = h.y * TS - oy + TS/2;
     ctx.beginPath();
     ctx.arc(sx, sy, r, 0, Math.PI * 2);

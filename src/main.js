@@ -24,6 +24,11 @@ function restart(){
   spawn(open);
   resetRun();
   closeEq();
+  // dev hook: start kitted out, for eyeballing held gear without hunting drops
+  if(globalThis.__GEAR__){
+    S.player.inv = { sword: 1, shield: 1, bow: 1, daggerL: 1, daggerR: 1 };
+    S.player.eq = { main: 'sword', off: 'shield' };
+  }
   computeFOV();
   hud();
   say(`${open_} open tiles \u2014 ${S.ents.length - 1} hostiles`);

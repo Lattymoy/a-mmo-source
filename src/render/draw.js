@@ -53,9 +53,10 @@ function drawWallFace(ctx, mask, sx, sy, col){
    digit, which was already the tightest thing at small sizes. */
 function drawPlayer(ctx, e, sx, sy, T, now, breath){
   const TS = view.TS;
-  const held = (e.eq.main ? 1 : 0) + (e.eq.off ? 1 : 0);
-  const r  = (held ? TS*0.28 : TS*0.40) * breath;
-  const lf = held ? TS*0.32 : TS*0.44;
+  /* The ring keeps full size now that gear hangs off the hands instead of
+     crowding its sides — the level digit gets all the room back. */
+  const r  = TS * 0.40 * breath;
+  const lf = TS * 0.44;
 
   /* Filled, not just stroked: the cape passes behind the body and a hollow
      ring would let cloth show through the level digit. */
@@ -77,19 +78,37 @@ function drawPlayer(ctx, e, sx, sy, T, now, breath){
   else ctx.fillText(lab, sx, sy);
   ctx.restore();
 
+}
+
+/* Gear is carried IN THE HANDS, so it inherits the nubs' float, lag and side
+   confinement for free — a weapon can never end up behind the wearer or on the
+   wrong side of them.
+
+   Glyphs rotate with facing, which is what preserves the stated `c○/` reading
+   in every direction: the shield stays on the off side and the sword on the
+   main side however the character turns. */
+function drawHeld(ctx, e, ox, oy, TS, T, now){
+  if(!e.hands) return;
   const sw = swingT(e, now);
+  const base = Math.atan2(e.face.y, e.face.x) + Math.PI / 2;
+
   ctx.save();
-  ctx.font = `${Math.floor(TS * 0.46)}px ${MONO}`;
-  ctx.fillStyle = T.gear;
-  for(const [slot, side] of [['off', -1], ['main', 1]]){
+  ctx.font = `${Math.floor(TS * 0.54)}px ${MONO}`;   // holds its weight beside the cape
+  ctx.lineJoin = 'round';
+  ['off', 'main'].forEach((slot, i) => {
     const k = e.eq[slot];
-    if(!k) continue;
+    if(!k) return;
+    const h = e.hands[i];
     ctx.save();
-    ctx.translate(sx + side * TS * 0.36, sy);
-    if(sw) ctx.rotate(side * sw * 1.1);
+    ctx.translate(h.x * TS - ox + TS/2, h.y * TS - oy + TS/2);
+    ctx.rotate(base + (i ? 1 : -1) * sw * 1.0);   // the weapon swings, not the wearer
+    ctx.lineWidth = Math.max(2, TS * 0.11);        // same keyline as cloth and nubs
+    ctx.strokeStyle = T.bg;
+    ctx.strokeText(GROUND[k].g, 0, 0);
+    ctx.fillStyle = T.gear;
     ctx.fillText(GROUND[k].g, 0, 0);
     ctx.restore();
-  }
+  });
   ctx.restore();
 }
 
@@ -177,14 +196,15 @@ export function draw(now){
       const lean = gait * TS * 0.05;
       const bob  = gait * TS * 0.06;
       updateCape(e, ex, ey, now, dt);
+      updateHands(e, ex, ey, now, dt, gait);      // solve before anything draws on them
       drawCape(ctx, e, ox, oy, TS, T.cape, dim, breath, T.bg);
       ctx.globalAlpha = 1;
       ctx.fillStyle = T.you;
       if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = T.you }
       drawPlayer(ctx, e, sx - e.face.x * lean, sy - e.face.y * lean - bob, T, now, breath);
-      // hands last: they float in front, so nothing may draw over them
-      updateHands(e, ex, ey, now, dt, gait);
-      drawHands(ctx, e, ox, oy, TS, T.you, dim, breath, T.bg);
+      // hands and what they carry last: they float in front of everything
+      drawHands(ctx, e, ox, oy, TS, T.you, dim, breath, T.bg, [e.eq.off, e.eq.main]);
+      drawHeld(ctx, e, ox, oy, TS, T, now);
     }
     else ctx.fillText(e.glyph, sx, sy);
     ctx.shadowBlur = 0;

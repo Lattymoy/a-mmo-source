@@ -171,13 +171,22 @@ rework — measurably **lagging** the body rather than welded to it, while still
 settling rather than jittering forever. A correlation test asserts the two nubs
 never move as one rigid pair.
 
-### Conflict to resolve
+### Gear rides the hands
 
-Equipped weapons still render **fixed left and right of the ring** per the
-stated `c○/` layout, while the hands rotate with facing. Walk north and your
-sword is on the east side while your hands point north. Nothing is broken, but
-a weapon should presumably be *in* a hand. Not changed, because the layout is
-stated — see [[Open Questions]].
+**Status:** `STATED` — resolved. Sword and shield are positioned in the hands.
+
+Previously gear drew at fixed offsets from the ring while the hands rotated with
+facing, so walking north put the sword on the east side. Now the weapon and
+shield are drawn **at the nub positions**, and every constraint the nubs carry
+applies to them at no extra cost: gear cannot fall behind the wearer, cross to
+the wrong side, or clash with the other hand.
+
+Held glyphs rotate with facing and swing with the attack, so the stated `c○/`
+layout is preserved as a **body-relative** arrangement. Gated by a test that
+walks the character through a full circle of facings and asserts the off hand
+stays left and the main hand right at every one.
+
+See [[Equipment]].
 
 ## Idle breathing
 

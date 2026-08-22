@@ -361,6 +361,23 @@ group('hands');
     check('hands never cross the centreline', crossed === 0, `${crossed} frames`);
   }
 
+  /* Gear rides the hands, so the c○/ reading has to survive rotation: the off
+     hand must stay on the LEFT of facing and the main hand on the right, in
+     every direction the character can face. */
+  {
+    let wrongSide = 0;
+    for(let a = 0; a < Math.PI * 2; a += 0.15){
+      e.face = { x: Math.cos(a), y: Math.sin(a) };
+      for(let f = 0; f < 60; f++) updateHands(e, 30, 30, f*16.67, 16.67, 0);
+      const px = -e.face.y, py = e.face.x;
+      const lOff  = (e.hands[0].x - 30)*px + (e.hands[0].y - 30)*py;
+      const lMain = (e.hands[1].x - 30)*px + (e.hands[1].y - 30)*py;
+      if(lOff > 0 || lMain < 0) wrongSide++;
+    }
+    check('off hand stays left, main hand right, at every facing',
+          wrongSide === 0, `${wrongSide} facings wrong`);
+  }
+
   const [L2, R2] = handTargets(e, ax, ay, 1);
   const dL = ahead(L2) - ahead(handTargets(e, ax, ay, 0)[0]);
   const dR = ahead(R2) - ahead(handTargets(e, ax, ay, 0)[1]);
