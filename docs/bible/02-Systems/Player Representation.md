@@ -2,10 +2,13 @@
 
 **Status:** `STATED`
 
-The player is represented as **a number**. The number visualizes their character
-sprite and their level.
+The player is represented as **a circle — `○` — with their level positioned
+inside it.**
 
 **Max level is 25 in the base game.**
+
+The ring is the "this is a player" signal. The number it contains is the level.
+Supersedes the earlier form where the bare digit was the glyph.
 
 ## Consequence: digits are reserved
 
@@ -14,8 +17,13 @@ sprite and their level.
 If players are numbers, then `0`–`9` belong to players and nothing else. No
 monster, item, terrain feature, or effect may use a digit as its glyph.
 
-That is a hard namespace rule and it is cheap to hold now, expensive later.
-Monsters stay letters (`k`, `r`, `T` in [[tap-grid]]).
+The ring softens this — containment now carries the signal, so a loose digit
+elsewhere would not be mistaken for a player. Keep the rule anyway. It costs
+nothing and it keeps the read unambiguous at small tile sizes, where the ring is
+the first thing to blur.
+
+Monsters stay letters (`k`, `r`, `T` in [[tap-grid]]). Gear has its own glyph
+set — see [[Equipment]].
 
 ## Consequence: level is public
 
@@ -42,8 +50,12 @@ Three ways out:
 3. **Double-width cell** for the player. Rejected on sight: it breaks grid
    alignment and the tap target.
 
-**Call: condense.** Implemented in [[tap-grid]] — the player glyph draws at 0.62×
-horizontal scale when the level reaches two digits.
+**Call: condense.** Implemented in [[tap-grid]] — the level draws at 0.66×
+horizontal scale inside the ring when it reaches two digits.
+
+The ring makes this harder, not easier: the number now has to fit *inside* a
+circle rather than fill the cell. Level sits at 0.44× tile against a ring at
+0.40× radius. This is the thing most likely to fail on a real phone.
 
 Whether that survives at mobile thumb-tile size is a *look at it* question, not
 an argue-about-it question. `tap-grid.html` has an `lvl+` control in the top bar

@@ -31,13 +31,17 @@
 10. **Two-digit legibility.** The condense call in [[Player Representation]] is
     built but not looked at on a real phone. Find the level where it stops
     reading.
-11. **What levelling does.** Max 25 is stated. What a level grants — stats,
+11. **Daggers.** `<` and `>` both stated as daggers — one item two orientations,
+    a pair, or two items. See [[Equipment]].
+12. **Equipping.** Gear exists on the floor and in inventory. What wielding a
+    sword changes — damage, tick cost, targeting shape — is not stated.
+13. **What levelling does.** Max 25 is stated. What a level grants — stats,
     ability slots, gear tier access — is not.
-12. **Band vs. zone.** Raum's three bands are distance-banded in project-raum.
+14. **Band vs. zone.** Raum's three bands are distance-banded in project-raum.
     This game has missions into procedural zones ([[World Structure]]). Whether a
     zone is a band, sits inside one, or is unrelated is not stated. The
     [[Biomes]] palettes borrow band names for demonstration only.
-13. **Zone generation.** "Procedural zone-based areas" is stated. What varies
+15. **Zone generation.** "Procedural zone-based areas" is stated. What varies
    between zones — biome, layout, hazard, boss — is not.
 
 ## Resolved since

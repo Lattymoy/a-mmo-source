@@ -170,20 +170,34 @@ function openTiles(){
   return o;
 }
 
-/* ───────────────────────── flora ───────────────────────── */
-// flora as traits, not recipes — the crafting layer reads these, the glyph is just the label
-const FLORA = {
-  fiber:   {g:'"', name:'fiber',   traits:'fibrous'},
-  resin:   {g:'%', name:'resin',   traits:'resinous'},
-  crystal: {g:'*', name:'crystal', traits:'brittle'},
+/* ───────────────────────── ground ─────────────────────────
+   Anything lying on the floor. Two classes:
+     flora — traits, not recipes; the crafting layer reads these
+     gear  — MAC's glyphs. Gear is manufactured, so it takes its colour from
+             the theme, never from the biome, same rule as entities.        */
+const GROUND = {
+  fiber:   {g:'"', name:'fiber',   cls:'flora', traits:'fibrous'},
+  resin:   {g:'%', name:'resin',   cls:'flora', traits:'resinous'},
+  crystal: {g:'*', name:'crystal', cls:'flora', traits:'brittle'},
+  sword:   {g:'/', name:'sword',   cls:'gear'},
+  shield:  {g:'c', name:'shield',  cls:'gear'},
+  bow:     {g:'}', name:'bow',     cls:'gear'},
+  daggerL: {g:'<', name:'dagger',  cls:'gear'},
+  daggerR: {g:'>', name:'dagger',  cls:'gear'},
 };
-function scatterFlora(open){
+const FLORA_KEYS = Object.keys(GROUND).filter(k=>GROUND[k].cls==='flora');
+const GEAR_KEYS  = Object.keys(GROUND).filter(k=>GROUND[k].cls==='gear');
+function scatterGround(open){
   flora = new Map();
-  const keys = Object.keys(FLORA);
-  const n = Math.floor(open.length*0.035);
-  for(let i=0;i<n;i++){
+  const nF = Math.floor(open.length*0.035);
+  for(let i=0;i<nF;i++){
     const [x,y] = open[ri(open.length)];
-    flora.set(idx(x,y), keys[ri(keys.length)]);
+    flora.set(idx(x,y), FLORA_KEYS[ri(FLORA_KEYS.length)]);
+  }
+  const nG = Math.max(4, Math.floor(open.length*0.008));
+  for(let i=0;i<nG;i++){
+    const [x,y] = open[ri(open.length)];
+    flora.set(idx(x,y), GEAR_KEYS[ri(GEAR_KEYS.length)]);
   }
 }
 
@@ -197,7 +211,7 @@ function spawn(open){
   ents = [];
   const [px,py] = open[ri(open.length)];
   player = {x:px,y:py,glyph:'@',lvl:1,hp:20,max:20,spd:100,next:0,you:true,
-            ax:px,ay:py,at:-9999, inv:{fiber:0,resin:0,crystal:0}};
+            ax:px,ay:py,at:-9999, inv:{}};
   ents.push(player);
 
   const pool = ['r','r','r','k','k','T'];
@@ -318,8 +332,11 @@ const ABIL = [
      } return t },
    fire(x,y){ const k=flora.get(idx(x,y));
      if(!k) return false;
-     flora.delete(idx(x,y)); player.inv[k]++;
-     say(`gathered ${FLORA[k].name} — ${FLORA[k].traits}`);
+     const G = GROUND[k];
+     flora.delete(idx(x,y));
+     player.inv[k] = (player.inv[k]||0) + 1;
+     say(G.cls==='gear' ? `picked up ${G.name} ${G.g}`
+                        : `gathered ${G.name} — ${G.traits}`);
      return true }},
 ];
 const cooldown = {};
@@ -480,19 +497,19 @@ const THEMES = {
   phosphor:{
     bg:'#05070A', floorGlyph:'·', wallGlyph:'#',
     floor:'#16342A', wall:'#2C6048', mem:'#0E2019',
-    you:'#9DFFD0', mon:'#FF9B7A', flora:'#7FE8A8', cell:null,
+    you:'#9DFFD0', gear:'#CFE9FF', mon:'#FF9B7A', flora:'#7FE8A8', cell:null,
     glow:8, lit:'#63C4E8', grid:false
   },
   bone:{
     bg:'#0B0A0C', floorGlyph:'.', wallGlyph:'#',
     floor:'#332C38', wall:'#6E6070', mem:'#1D1920',
-    you:'#F0E6D4', mon:'#C4553A', flora:'#8CA85E', cell:null,
+    you:'#F0E6D4', gear:'#D8B87A', mon:'#C4553A', flora:'#8CA85E', cell:null,
     glow:0, lit:'#D8A24C', grid:false
   },
   board:{
     bg:'#080B0F', floorGlyph:'·', wallGlyph:'▓',
     floor:'#4A5C6A', wall:'#7E93A4', mem:'#222A33', cell:'#141B22',
-    you:'#EAF4FF', mon:'#E86A5A', flora:'#6FBF8E',
+    you:'#EAF4FF', gear:'#E8C87A', mon:'#E86A5A', flora:'#6FBF8E',
     glow:0, lit:'#4E9AC4', grid:true
   },
 };
@@ -569,7 +586,9 @@ function draw(now){
     const buried = wallT && !f;
     ctx.globalAlpha = (v ? (isValid?1:dim) : 0.55*dim) * (buried ? 0.30 : 1);
     const fl = flora.get(idx(x,y));
-    let col = !v ? T.mem : (wallT ? T.wall : (fl ? T.flora : T.floor));
+    let col = !v ? T.mem
+                 : (wallT ? T.wall
+                          : (fl ? (GROUND[fl].cls==='gear' ? T.gear : T.flora) : T.floor));
     if(isValid && !wallT) col = T.lit;
     ctx.shadowBlur = 0;
 
@@ -591,7 +610,7 @@ function draw(now){
       }
     } else {
       ctx.fillStyle = col;
-      ctx.fillText(wallT ? T.wallGlyph : (fl ? FLORA[fl].g : T.floorGlyph), sx, sy);
+      ctx.fillText(wallT ? T.wallGlyph : (fl ? GROUND[fl].g : T.floorGlyph), sx, sy);
     }
   }
 
@@ -604,15 +623,21 @@ function draw(now){
     ctx.fillStyle = e.you ? T.you : T.mon;
     if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = ctx.fillStyle }
     if(e.you){
-      // the player IS their level — two digits share one cell, condensed
+      // the player is a RING; the level sits inside it
+      ctx.strokeStyle = T.you;
+      ctx.lineWidth = Math.max(1.4, TS*0.075);
+      ctx.beginPath();
+      ctx.arc(sx, sy, TS*0.40, 0, Math.PI*2);
+      ctx.stroke();
       const s = String(e.lvl);
+      ctx.save();
+      ctx.font = `${Math.floor(TS*0.44)}px ui-monospace, Menlo, Consolas, monospace`;
       if(s.length > 1){
-        ctx.save();
         ctx.translate(sx, sy);
-        ctx.scale(0.62, 1);
+        ctx.scale(0.66, 1);
         ctx.fillText(s, 0, 0);
-        ctx.restore();
       } else ctx.fillText(s, sx, sy);
+      ctx.restore();
     } else ctx.fillText(e.glyph, sx, sy);
     ctx.shadowBlur = 0;
 
@@ -661,8 +686,9 @@ function hud(){
   document.getElementById('hp').textContent = Math.max(0,player.hp);
   document.getElementById('lvl').textContent = player.lvl;
   document.getElementById('clk').textContent = Math.floor(clock/100);
-  const i = player.inv;
-  document.getElementById('inv').textContent = `" ${i.fiber}  % ${i.resin}  * ${i.crystal}`;
+  const carried = Object.entries(player.inv).filter(([,n])=>n>0)
+    .map(([k,n])=>`${GROUND[k].g}${n}`).join(' ');
+  document.getElementById('inv').textContent = carried || '—';
   bar();
 }
 function drawLog(){
@@ -691,7 +717,7 @@ function restart(){
   rnd = mulberry32((Math.random()*1e9)|0);
   const n = genMap();
   const open = openTiles();
-  scatterFlora(open);
+  scatterGround(open);
   spawn(open);
   clock=0; waiting=false; dead=false; path=[]; armed=null; valid=null; queued=null; logs=[];
   for(const k in cooldown) delete cooldown[k];

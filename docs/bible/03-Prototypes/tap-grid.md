@@ -17,16 +17,19 @@ request.
 - Three visual treatments and two camera modes — see [[Visual Treatments]].
   Default is `board`.
 - Four biome palettes composing over any treatment — see [[Biomes]].
-- Flora scattered on open floor, gatherable, counted in the HUD.
-- Player drawn as their level number, condensed at two digits, with an `lvl+`
-  control cycling 1→25 — see [[Player Representation]].
+- One ground table covering flora and gear, both gatherable, counted in the HUD
+  — see [[Equipment]].
+- Player drawn as a ring with their level inside it, condensed at two digits,
+  with an `lvl+` control cycling 1→25 — see [[Player Representation]].
 
 ## Known state
 
 - **Single player.** The scheduler supports more actors; only one is wired.
 - **Flora traits are strings doing nothing.** `fibrous`, `resinous`, `brittle` are
-  written into the flora table and surfaced in the log on gather. There is no
-  crafting system consuming them. They are a placeholder for the "craft gear"
+  written into the ground table and surfaced in the log on gather. There is no
+  crafting system consuming them.
+- **Gear has no stats and cannot be equipped.** It spawns, renders and is picked
+  up. That is all. They are a placeholder for the "craft gear"
   pillar in [[Premise]], not a designed trait system.
 - **Monster AI is minimal.** See player → step toward or attack. Otherwise wander.
 - Sixteen hostiles, fixed. No spawning, no progression, no death state beyond a
