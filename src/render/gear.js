@@ -1,4 +1,4 @@
-/* GEAR SPRITES — pixel art.
+/* GEAR RENDERING — pixel art.
 
    Gear is drawn, not lettered, both in the hand and lying on the ground. The
    sprites are pixel grids rather than vector curves: at a thumb-sized tile a
@@ -12,127 +12,14 @@
    and rotated to facing, so a sprite never needs to know which way it points.
 
    `grip` is the pixel the hand actually holds, so a sword hangs from its handle
-   rather than from its middle. `tiles` is the sprite's height in tile units. */
+   rather than from its middle. `tiles` is the sprite's height in tile units.
 
-export const MATERIALS = {
-  wood: {
-    K: '#2A1A0F',   // outline
-    D: '#7A5632',   // grain, shadow, bindings
-    M: '#A87C4A',   // body
-    L: '#C9A06A',   // lit face
-    H: '#DCB782',   // highlight
-    C: '#D9CCB2',   // sinew: bowstring, lashing
-  },
-};
+   The pixel data itself is GENERATED — see tools/sprites/author.mjs and
+   `npm run sprites`. This file is the renderer only. */
 
-export const SPRITES = {
-  sword: {
-    material: 'wood', tiles: 0.8, grip: [6, 24],
-    rows: [
-      '......K......',
-      '.....KMK.....',
-      '.....KMK.....',
-      '.....KMK.....',
-      '....KLMDK....',
-      '....KLMDK....',
-      '....KLMDK....',
-      '...KLLMMDK...',
-      '...KLLDMDK...',
-      '...KLHDMDK...',
-      '...KLHDMDK...',
-      '...KLHDMDK...',
-      '...KLLMMDK...',
-      '...KHLMMDK...',
-      '...KHLMMDK...',
-      '...KLLDMDK...',
-      '...KLLDDDK...',
-      '...KLLDDDK...',
-      '...KLLDMDK...',
-      '.KKKLLMMDKKK.',
-      'KMLLLLLLLLLMK',
-      'KDMMMMMMMMMDK',
-      'KDDDDDDDDDDDK',
-      '.KKKKMLMKKKK.',
-      '....KDMDK....',
-      '....KMLMK....',
-      '....KDMDK....',
-      '...KMLLLMK...',
-      '...KDDMDDK...',
-      '....KKKKK....',
-    ],
-  },
-  dagger: {
-    material: 'wood', tiles: 0.52, grip: [5, 16],
-    rows: [
-      '.....K.....',
-      '....KMK....',
-      '....KMK....',
-      '...KLMDK...',
-      '...KLMDK...',
-      '..KLLMMDK..',
-      '..KLLDMDK..',
-      '..KLLDMDK..',
-      '..KLLDMDK..',
-      '..KLHMMDK..',
-      '..KLHMMDK..',
-      '..KLLMMDK..',
-      '.KLLLLLLLK.',
-      '.KDDDDDDDK.',
-      '..KKMLMKK..',
-      '...KDMDK...',
-      '...KMLMK...',
-      '...KDMDK...',
-      '....KKK....',
-    ],
-  },
-  shield: {
-    material: 'wood', tiles: 0.42, grip: [6, 8],
-    rows: [
-      '.KKLDMMMDDKK.',
-      'KLLMDMMMDMDDK',
-      'KLLMDMMMDMDDK',
-      'KLLMDMMMDMDDK',
-      'KLLMDMMMDMDDK',
-      'KLLMDDHDDMDDK',
-      'KLLMDLLMDMDDK',
-      'KDDDDDDDDDDDK',
-      'KLLMDMMMDMDDK',
-      '.KLLDMMMDDDK.',
-      '.KLLDMMMDDDK.',
-      '..KLDMMMDDK..',
-      '..KLDMMMDDK..',
-      '...KKLLDKK...',
-      '.....KKK.....',
-      '.............',
-    ],
-  },
-  bow: {
-    material: 'wood', tiles: 0.44, grip: [7, 2],
-    rows: [
-      '.....KMHMK.....',
-      '....KL.D.MK....',
-      '...KL..D..MK...',
-      '..KL.......MK..',
-      '.KL.........MK.',
-      'KM...........DK',
-      'KM...........DK',
-      'KM...........DK',
-      'KDCCCCCCCCCCCDK',
-      '.KKKKKKKKKKKKK.',
-      '...............',
-    ],
-  },
-};
+import { MATERIALS, SPRITES, GEAR_ART } from './gear-sprites.js';
+export { MATERIALS, SPRITES, GEAR_ART };
 
-/* Which sprite each item uses. Both daggers share one. Items with no entry fall
-   back to their map glyph, so adding art is additive. */
-export const GEAR_ART = {
-  sword:   'sword',
-  shield:  'shield',
-  bow:     'bow',
-  daggerL: 'dagger',
-  daggerR: 'dagger',
-};
 
 export const hasArt = key => !!GEAR_ART[key];
 const spriteOf = key => SPRITES[GEAR_ART[key]];

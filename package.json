@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node test/run.mjs",
-    "bundle": "vite build && node tools/bundle-single.mjs"
+    "bundle": "vite build && node tools/bundle-single.mjs",
+    "sprites": "node tools/sprites/build.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

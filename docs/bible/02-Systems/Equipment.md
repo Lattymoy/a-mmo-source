@@ -100,7 +100,9 @@ tile a vector curve turns to mush; a pixel grid stays crisp and is authored by
 eye. The first pass was drawn with beziers and was replaced outright.
 
 Sprites are grids of palette **letters**, not colours, so one sprite renders in
-any material. Colour comes from the material because progression is material
+any material. They are generated from an authoring source rather than typed by
+hand — the method is [[Pixel Sprite Authoring]], and it is the part worth
+keeping. Colour comes from the material because progression is material
 driven — bosses drop material, material builds weaponry ([[Progression]]). Only
 `wood` exists; no tier above it is invented.
 

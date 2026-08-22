@@ -391,6 +391,27 @@ group('gear sprites');
     await import('../src/render/gear.js');
   const { BODY_R, KEYLINE, HAND_FWD_MIN } = await import('../src/render/character.js');
 
+  /* DRIFT GATE. The committed pixel data must be exactly what the authoring
+     source produces. Hand-edit gear-sprites.js and this fails — which is the
+     point, because the preview image everyone judged the art by was rendered
+     from the authoring source, not from the committed file. */
+  {
+    const authored = (await import('../tools/sprites/author.mjs')).build();
+    const drift = [];
+    for(const [id, a] of Object.entries(authored)){
+      const c = SPRITES[id];
+      if(!c){ drift.push(`${id}: missing`); continue }
+      if(a.rows.join('|') !== c.rows.join('|')) drift.push(`${id}: pixels`);
+      if(a.tiles !== c.tiles) drift.push(`${id}: tiles`);
+      if(a.grip.join() !== c.grip.join()) drift.push(`${id}: grip`);
+      if(a.material !== c.material) drift.push(`${id}: material`);
+    }
+    for(const id of Object.keys(SPRITES))
+      if(!authored[id]) drift.push(`${id}: not authored`);
+    check('committed sprites match the authoring source', drift.length === 0,
+          drift.join(' ') || 'in sync — run `npm run sprites` after editing author.mjs');
+  }
+
   check('every gear item has a sprite',
         Object.entries(GROUND).filter(([,g]) => g.cls === 'gear').every(([k]) => hasArt(k)),
         Object.entries(GROUND).filter(([k,g]) => g.cls === 'gear' && !hasArt(k))

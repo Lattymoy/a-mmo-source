@@ -36,6 +36,10 @@ Every page carries a **Status** line using one of:
 
 - [[Architecture]]
 
+## Workflow
+
+- [[Pixel Sprite Authoring]]
+
 ## Roadmap
 
 - [[Open Questions]]

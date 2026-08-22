@@ -12,7 +12,12 @@ npm run dev        # vite dev server
 npm test           # headless suite, no browser needed
 npm run build      # dist/
 npm run bundle     # dist/a-mmo.html — one self-contained file
+npm run sprites    # regenerate gear pixel data + public/sprite-sheet.png
 ```
+
+Gear art is generated from `tools/sprites/author.mjs`; never hand-edit
+`src/render/gear-sprites.js`. The workflow is documented in
+`docs/bible/05-Workflow/Pixel Sprite Authoring.md` and a test enforces it.
 
 ## Layout
 
