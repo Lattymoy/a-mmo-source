@@ -384,4 +384,40 @@ group('hands');
   check('hands swing in opposition', dL * dR < 0, `${dL.toFixed(3)} vs ${dR.toFixed(3)}`);
 }
 
+/* ── gear sprites ──────────────────────────────────────────────────────── */
+group('gear sprites');
+{
+  const { MATERIALS, GEAR_ART, SWORD, hasArt } = await import('../src/render/gear.js');
+  const { HAND_MIN, BODY_R, KEYLINE } = await import('../src/render/character.js');
+
+  check('every sprite names a real item',
+        Object.keys(GEAR_ART).every(k => GROUND[k] && GROUND[k].cls === 'gear'),
+        Object.keys(GEAR_ART).join(' '));
+  check('every gear material has a palette',
+        Object.values(GROUND).filter(g => g.material)
+          .every(g => MATERIALS[g.material]),
+        Object.values(GROUND).filter(g=>g.material).map(g=>g.material).join(' '));
+  check('items without art still have a glyph',
+        Object.entries(GROUND).filter(([k,g]) => g.cls === 'gear' && !hasArt(k))
+          .every(([,g]) => g.g && g.g.length === 1));
+
+  /* The grip and pommel reach BACKWARD from the hand, and the hand sits at a
+     measured gap from the body. A long tang would silently close that gap and
+     put the pommel over the level digit. */
+  const rearReach = HAND_MIN - SWORD.pommel;
+  const bodyEdge = BODY_R + KEYLINE;
+  check('sword pommel does not reach the body',
+        rearReach > bodyEdge,
+        `pommel at ${rearReach.toFixed(3)} vs body edge ${bodyEdge.toFixed(3)}`);
+
+  check('blade points forward of the hand', SWORD.tip < 0, `${SWORD.tip}`);
+  check('crossguard is narrower than the hand separation', SWORD.span < 0.56, `${SWORD.span}`);
+
+  // a cant big enough to swing the blade back across the wearer would undo the
+  // whole point of confining hands to their own side
+  check('rest cants stay modest',
+        Object.values(GROUND).every(g => Math.abs(g.cant || 0) < 0.8),
+        Object.entries(GROUND).filter(([,g])=>g.cant).map(([k,g])=>`${k}:${g.cant}`).join(' '));
+}
+
 report();

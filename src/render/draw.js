@@ -5,6 +5,7 @@ import { GROUND } from '../world/ground.js';
 import { palette } from './themes.js';
 import { view, canvas, context } from './camera.js';
 import { updateCape, drawCape, updateHands, drawHands, breathT, gaitT } from './character.js';
+import { drawGearArt } from './gear.js';
 
 let lastDraw = 0;
 
@@ -101,12 +102,18 @@ function drawHeld(ctx, e, ox, oy, TS, T, now){
     const h = e.hands[i];
     ctx.save();
     ctx.translate(h.x * TS - ox + TS/2, h.y * TS - oy + TS/2);
-    ctx.rotate(base + (i ? 1 : -1) * sw * 1.0);   // the weapon swings, not the wearer
-    ctx.lineWidth = Math.max(2, TS * 0.11);        // same keyline as cloth and nubs
-    ctx.strokeStyle = T.bg;
-    ctx.strokeText(GROUND[k].g, 0, 0);
-    ctx.fillStyle = T.gear;
-    ctx.fillText(GROUND[k].g, 0, 0);
+    const side = i ? 1 : -1;
+    const cant = GROUND[k].cant || 0;
+    // rest angle, then the swing on top: the weapon moves, not the wearer
+    ctx.rotate(base + side * (cant + sw * 1.0));
+    // drawn sprite if the item has one, otherwise its map glyph
+    if(!drawGearArt(ctx, k, TS, T.bg)){
+      ctx.lineWidth = Math.max(2, TS * 0.11);      // same keyline as cloth and nubs
+      ctx.strokeStyle = T.bg;
+      ctx.strokeText(GROUND[k].g, 0, 0);
+      ctx.fillStyle = T.gear;
+      ctx.fillText(GROUND[k].g, 0, 0);
+    }
     ctx.restore();
   });
   ctx.restore();

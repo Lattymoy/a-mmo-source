@@ -90,6 +90,43 @@ much was blocked. Paired daggers total +4 attack against a sword's +3 — the pa
 out-damages the single blade and gives up all defense. Nothing yet makes that a
 real trade, because tick cost does not vary by weapon. See [[Open Questions]].
 
+## Sprites
+
+**Status:** `BUILT` — wooden sword, 2026-08-22. First drawn gear.
+
+Gear stops being a glyph the moment it is held. **On the ground a sword stays
+`/`** — the map is a glyph language and has to stay scannable — but in the hand
+it is drawn geometry, the same step the walls took in [[Visual Treatments]].
+
+Sprites are defined in **tile units** in a local space pointing along -Y, and
+the caller has already translated to the hand and rotated to facing, so a sprite
+never needs to know which way anything points. Items with no sprite fall back to
+their glyph, so adding art is additive and can never break an undrawn item.
+
+### Colour comes from material, not theme
+
+Progression is material driven — bosses drop material, material builds weaponry
+([[Progression]]) — so a weapon has to say what it is made of before any stat is
+read. `MATERIALS` holds the palette; only `wood` exists so far, and no tier
+above it is invented.
+
+### The wooden sword
+
+Tapered leaf blade with a **flat tip** rather than a point — wood does not hold
+an edge, and the blunt tip is what says training weapon. One lit edge and a
+single off-centre grain line; two lines would read as a fuller, which is wrong
+for carved wood. Bound grip, dark crossguard, round pommel.
+
+Two constraints that are gated rather than eyeballed:
+
+- **The pommel must not reach the body.** Grip and pommel extend *backward* from
+  the hand, and the hand sits at a measured gap from the ring. A longer tang
+  would silently close that gap and put the pommel over the level digit.
+- **Rest cant stays under 0.8 rad.** A weapon is held at an angle rather than
+  dead along facing, which otherwise reads as a permanent thrust — but a large
+  cant would swing the blade back across the wearer and undo the side
+  confinement that stops the hands clashing.
+
 ## Prototype state
 
 Gear scatters on open floor and is picked up with the same `gather` verb as

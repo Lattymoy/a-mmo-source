@@ -12,7 +12,10 @@ export const GROUND = {
   resin:   { g: '%', name: 'resin',   cls: 'flora', traits: 'resinous'  },
   crystal: { g: '*', name: 'crystal', cls: 'flora', traits: 'brittle'   },
 
-  sword:   { g: '/', name: 'sword',  cls: 'gear', slot: 'main', atk: 3 },
+  // `cant` is the resting angle, in radians, mirrored by which hand holds it.
+  // Aligned dead-on with facing a blade reads as a permanent thrust.
+  sword:   { g: '/', name: 'wooden sword', cls: 'gear', slot: 'main', atk: 3,
+             material: 'wood', cant: 0.38 },
   bow:     { g: '}', name: 'bow',    cls: 'gear', slot: 'main', atk: 3, twoHand: true, ranged: true },
   daggerR: { g: '>', name: 'dagger', cls: 'gear', slot: 'main', atk: 2 },
   daggerL: { g: '<', name: 'dagger', cls: 'gear', slot: 'off',  atk: 2 },
