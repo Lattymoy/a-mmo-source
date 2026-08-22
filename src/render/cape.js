@@ -15,7 +15,7 @@
    Physics runs in TILE units, so the cloth behaves identically at every camera
    zoom and on every screen size, including the enlarged boss viewport. */
 
-export const RIBS     = 5;      // fan across the back — 5 ribs give 4 hem lobes
+export const RIBS     = 7;      // fan across the back; alternating lengths curl the hem
 export const RIB_N    = 5;      // nodes per rib, anchor included
 export const RIB_SEG  = 0.20;   // tile lengths between nodes
 export const SHOULDER = 0.36;   // anchor arc radius — pinned at the body's edge,
@@ -24,7 +24,8 @@ const SPREAD   = 1.62;          // half-angle of the shoulder arc — wide enoug
                                 // that the cloth wraps past the body's sides
 const DAMP     = 0.90;          // velocity retained per frame
 const DRAG     = 0.15;          // pull toward the trailing rest pose
-const SWAY     = 0.13;          // ripple amplitude
+const SWAY     = 0.12;          // ripple amplitude
+const CURL     = 0.13;          // alternating rib length — soft lobes, no corners
 const WAVE     = 0.85;          // phase shift per node — makes the sway travel
 const MAX_BEND = 0.40;          // radians per joint
 const SPILL    = 0.55;          // how strongly outer ribs sweep back behind
@@ -73,8 +74,11 @@ export function updateCape(e, ax, ay, now, dt){
     const rA = aA - t * SPREAD * SPILL;
     const rdx = Math.cos(rA), rdy = Math.sin(rA);
 
-    // centre ribs hang longest, so the hem reads as a curve not a straight cut
-    const seg = RIB_SEG * (1 - 0.22 * Math.abs(t));
+    /* Centre ribs hang longest so the hem curves rather than cutting straight
+       across, and alternate ribs run short. With a spline through the tips that
+       alternation reads as soft curls — undulation without a single corner,
+       which is what separates cloth from a bat wing. */
+    const seg = RIB_SEG * (1 - 0.13 * Math.abs(t)) * (1 + (j % 2 ? -CURL : CURL * 0.5));
     const phase = now / 540 + j * 1.1 + (e.x * 0.7 + e.y * 1.3);
 
     rib[0].x = anx; rib[0].y = any;
@@ -122,59 +126,69 @@ export function updateCape(e, ax, ay, now, dt){
   }
 }
 
-/* Outline: down the outer edge of the first rib, across the hem through every
-   rib tip, up the outer edge of the last rib, closed across the shoulders.
-   Hem control points are pulled toward the body so each gap between tips cuts
-   inward — that notch is what makes the lobes read as a ragged hem. */
+/* ── rendering ─────────────────────────────────────────────────────────────
+   The outline is ONE closed loop walked around the cloth: out along the first
+   rib, across the hem through every rib tip, back in along the last rib, then
+   home along the shoulder arc.
+
+   It is drawn as a Catmull-Rom spline rather than as line segments. That is the
+   whole difference between cloth and a bat wing: straight edges meeting at rib
+   tips make hard points, and pulling the hem inward between tips cuts notches
+   between them. A spline through the same points gives soft lobes, and the
+   undulation comes from the ribs' own lengths instead of from carved notches. */
+function catmullLoop(ctx, pts){
+  const n = pts.length;
+  const at = i => pts[(i % n + n) % n];
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for(let i = 0; i < n; i++){
+    const p0 = at(i-1), p1 = at(i), p2 = at(i+1), p3 = at(i+2);
+    ctx.bezierCurveTo(
+      p1[0] + (p2[0]-p0[0])/6, p1[1] + (p2[1]-p0[1])/6,
+      p2[0] - (p3[0]-p1[0])/6, p2[1] - (p3[1]-p1[1])/6,
+      p2[0], p2[1]);
+  }
+  ctx.closePath();
+}
+
 export function drawCape(ctx, e, ox, oy, TS, col, alpha, breath, bg){
   if(!e.cape) return;
   const P = n => [n.x * TS - ox + TS/2, n.y * TS - oy + TS/2];
-  const cx = e._lax * TS - ox + TS/2, cy = e._lay * TS - oy + TS/2;
 
   const first = e.cape[0], last = e.cape[RIBS - 1];
-  const tips = e.cape.map(r => P(r[r.length - 1]));
-
-  const outline = () => {
-    ctx.beginPath();
-    const a = P(first[0]);
-    ctx.moveTo(a[0], a[1]);
-    for(let i = 1; i < first.length; i++){ const p = P(first[i]); ctx.lineTo(p[0], p[1]) }
-
-    for(let j = 1; j < tips.length; j++){
-      const t0 = tips[j-1], t1 = tips[j];
-      const mx = (t0[0] + t1[0]) / 2, my = (t0[1] + t1[1]) / 2;
-      ctx.quadraticCurveTo(mx + (cx - mx) * 0.34, my + (cy - my) * 0.34, t1[0], t1[1]);
-    }
-
-    for(let i = last.length - 2; i >= 0; i--){ const p = P(last[i]); ctx.lineTo(p[0], p[1]) }
-    ctx.quadraticCurveTo(cx, cy, a[0], a[1]);   // close around the body
-    ctx.closePath();
-  };
+  const loop = [];
+  for(let i = 0; i < first.length; i++) loop.push(P(first[i]));          // out
+  for(let j = 1; j < RIBS; j++) loop.push(P(e.cape[j][e.cape[j].length-1])); // hem
+  for(let i = last.length - 2; i >= 0; i--) loop.push(P(last[i]));       // back in
+  for(let j = RIBS - 2; j >= 1; j--) loop.push(P(e.cape[j][0]));         // shoulders
 
   // heavy dark keyline first — this is what lifts the cape off dark terrain
+  ctx.lineJoin = 'round';
   ctx.globalAlpha = alpha * 0.9;
   ctx.strokeStyle = bg;
-  ctx.lineWidth = Math.max(2, TS * 0.13);
-  ctx.lineJoin = 'round';
-  outline();
+  ctx.lineWidth = Math.max(2, TS * 0.14);
+  catmullLoop(ctx, loop);
   ctx.stroke();
 
   ctx.globalAlpha = alpha * 0.92;
   ctx.fillStyle = col;
-  outline();
+  catmullLoop(ctx, loop);
   ctx.fill();
 
   // ribs as fold lines — cloth needs interior structure or it reads as a decal
-  ctx.globalAlpha = alpha * 0.30;
+  ctx.globalAlpha = alpha * 0.28;
   ctx.strokeStyle = bg;
   ctx.lineWidth = Math.max(1, TS * 0.045);
   ctx.lineCap = 'round';
   for(let j = 1; j < RIBS - 1; j++){
     const rib = e.cape[j];
     ctx.beginPath();
-    const s = P(rib[0]);
-    ctx.moveTo(s[0], s[1]);
-    for(let i = 1; i < rib.length; i++){ const p = P(rib[i]); ctx.lineTo(p[0], p[1]) }
+    const s0 = P(rib[0]);
+    ctx.moveTo(s0[0], s0[1]);
+    for(let i = 1; i < rib.length - 1; i++){
+      const a = P(rib[i]), b = P(rib[i+1]);
+      ctx.quadraticCurveTo(a[0], a[1], (a[0]+b[0])/2, (a[1]+b[1])/2);
+    }
     ctx.stroke();
   }
   ctx.globalAlpha = alpha;

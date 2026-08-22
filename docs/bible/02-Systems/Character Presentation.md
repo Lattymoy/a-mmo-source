@@ -15,7 +15,7 @@ Stated:
 cape anchors across the shoulders, wraps around the body, spreads wider than the
 wearer, and ends in a scalloped hem of distinct lobes.
 
-Built as **ribs** — five short verlet chains fanned across the back. Ribs are
+Built as **ribs** — seven short verlet chains fanned across the back. Ribs are
 what make it cloth rather than a pennant: the hem's lobes fall out of the rib
 tips for free, and the same ribs double as interior fold lines when shaded.
 The first attempt was a single chain tapering to a point, which could only ever
@@ -50,9 +50,15 @@ frames and asserts no node ever enters the ring.
 - **The shoulder arc must sit at the body's edge, not inside it.** Anchored at
   0.30 tiles against a 0.40 ring, the whole fan hid under the body and only the
   tips showed — it looked like a fringe.
-- **The hem's control points pull toward the body.** That inward notch between
-  rib tips is what makes the lobes read as a ragged hem rather than a scalloped
-  balloon.
+- **The hem is a spline, not line segments.** Straight edges meeting at rib tips
+  make hard points, and pulling the hem inward between tips carves notches
+  between them. Together they read unmistakably as a **bat wing**. The outline
+  is now one closed Catmull-Rom loop walked around the whole cloth, so no edge
+  anywhere has a corner.
+- **Undulation comes from the ribs, not from carving.** A perfectly smooth
+  spline over evenly-spaced tips reads as a scallop shell. Alternate ribs run
+  ~13% short, and the spline turns that into soft curls — waves with no
+  corners.
 - **A heavy dark keyline underneath everything.** Taken from the reference; it
   is what lifts the cloth off dark terrain.
 - **Interior fold lines.** Flat colour reads as a sticker no matter how good the

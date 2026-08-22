@@ -158,9 +158,10 @@ group('entities');
 /* ── cape ──────────────────────────────────────────────────────────────── */
 group('cape');
 {
-  const { initCape, updateCape, RIBS, RIB_N, RIB_SEG, SHOULDER, breathT, gaitT } =
+  const { initCape, updateCape, RIBS, RIB_N, SHOULDER, breathT, gaitT } =
     await import('../src/render/cape.js');
-  const REACH = SHOULDER + (RIB_N - 1) * RIB_SEG;
+  // ribs vary in length (curl + centre bias), so reach is measured per rib
+  const reachOf = seg => SHOULDER + (RIB_N - 1) * seg;
 
   const e = { x: 10, y: 10, at: -9999 };
   initCape(e);
@@ -186,7 +187,7 @@ group('cape');
         }
       }
       const tip = rib[rib.length-1];
-      if(Math.hypot(tip.x - ax, tip.y - ay) > REACH + 1e-6) overlong++;
+      if(Math.hypot(tip.x - ax, tip.y - ay) > reachOf(seg) + 1e-6) overlong++;
     }
   }
   check('cape never goes non-finite', bad === 0, `${bad} bad nodes`);
@@ -197,8 +198,9 @@ group('cape');
   for(let f = 0; f < 400; f++) updateCape(e, ax, ay, (900+f) * 16.67, 16.67);
   const mid = e.cape[(RIBS/2)|0];
   const tip = mid[mid.length-1];
+  const midSeg = Math.hypot(mid[1].x - mid[0].x, mid[1].y - mid[0].y);
   const trail = Math.hypot(tip.x - ax, tip.y - ay);
-  check('settles trailing, not collapsed', trail > REACH * 0.7,
+  check('settles trailing, not collapsed', trail > reachOf(midSeg) * 0.7,
         `tip ${trail.toFixed(3)} tiles behind`);
   const dot = ((tip.x-ax)*-e.face.x + (tip.y-ay)*-e.face.y) / (trail || 1);
   check('settles BEHIND the facing', dot > 0.8, `alignment ${dot.toFixed(2)}`);
