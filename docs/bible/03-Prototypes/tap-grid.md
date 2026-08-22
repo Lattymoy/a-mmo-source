@@ -15,6 +15,8 @@ request.
 - Tap grammar and four placeholder abilities — see [[Tap Input]].
 - Three visual treatments and two camera modes — see [[Visual Treatments]].
 - Flora scattered on open floor, gatherable, counted in the HUD.
+- Player drawn as their level number, condensed at two digits, with an `lvl+`
+  control cycling 1→25 — see [[Player Representation]].
 
 ## Known state
 

@@ -26,6 +26,7 @@ Every page carries a **Status** line using one of:
 - [[Visual Treatments]]
 - [[Progression]]
 - [[Platforms]]
+- [[Player Representation]]
 
 ## Prototypes
 

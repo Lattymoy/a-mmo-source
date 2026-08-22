@@ -28,7 +28,12 @@
 9. **Two hubs.** project-raum already has a hub — a single-player campsite,
    marked COMPLETE. This project's hub is shared, with vendors and quests. Same
    place, different place, or different era is not stated. See [[Raum]].
-10. **Zone generation.** "Procedural zone-based areas" is stated. What varies
+10. **Two-digit legibility.** The condense call in [[Player Representation]] is
+    built but not looked at on a real phone. Find the level where it stops
+    reading.
+11. **What levelling does.** Max 25 is stated. What a level grants — stats,
+    ability slots, gear tier access — is not.
+12. **Zone generation.** "Procedural zone-based areas" is stated. What varies
    between zones — biome, layout, hazard, boss — is not.
 
 ## Resolved since

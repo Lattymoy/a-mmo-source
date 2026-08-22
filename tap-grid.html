@@ -45,9 +45,11 @@
 
 <div id="top">
   <span class="stat">HP <b id="hp">20</b></span>
+  <span class="stat">LVL <b id="lvl">1</b></span>
   <span class="stat">T <b id="clk">0</b></span>
   <span class="stat" id="inv">— — —</span>
   <span class="sp"></span>
+  <button class="tog" id="bLvl">lvl+</button>
   <button class="tog" id="bTheme">phosphor</button>
   <button class="tog" id="bCam">close</button>
   <button class="tog" id="bNew">new</button>
@@ -64,6 +66,7 @@
 <script>
 /* ───────────────────────── config ───────────────────────── */
 const W = 56, H = 56, FOV = 8;
+const LVL_MAX = 25;          // max level, base game
 const STEP_MS = 68;          // scheduler pace — readability, not simulation speed
 const MOVE_MS = 100;         // glyph slide duration
 
@@ -156,7 +159,7 @@ const KINDS = {
 function spawn(open){
   ents = [];
   const [px,py] = open[ri(open.length)];
-  player = {x:px,y:py,glyph:'@',hp:20,max:20,spd:100,next:0,you:true,
+  player = {x:px,y:py,glyph:'@',lvl:1,hp:20,max:20,spd:100,next:0,you:true,
             ax:px,ay:py,at:-9999, inv:{fiber:0,resin:0,crystal:0}};
   ents.push(player);
 
@@ -530,7 +533,17 @@ function draw(now){
     ctx.globalAlpha = e.you ? 1 : dim;
     ctx.fillStyle = e.you ? T.you : T.mon;
     if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = ctx.fillStyle }
-    ctx.fillText(e.glyph, sx, sy);
+    if(e.you){
+      // the player IS their level — two digits share one cell, condensed
+      const s = String(e.lvl);
+      if(s.length > 1){
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.scale(0.62, 1);
+        ctx.fillText(s, 0, 0);
+        ctx.restore();
+      } else ctx.fillText(s, sx, sy);
+    } else ctx.fillText(e.glyph, sx, sy);
     ctx.shadowBlur = 0;
 
     if(!e.you && e.hp < e.max){
@@ -576,6 +589,7 @@ function bar(){
 }
 function hud(){
   document.getElementById('hp').textContent = Math.max(0,player.hp);
+  document.getElementById('lvl').textContent = player.lvl;
   document.getElementById('clk').textContent = Math.floor(clock/100);
   const i = player.inv;
   document.getElementById('inv').textContent = `" ${i.fiber}  % ${i.resin}  * ${i.crystal}`;
@@ -615,6 +629,11 @@ cv.addEventListener('pointerdown', ev=>{
   tapTile(x,y);
 });
 
+// dev: cycle 1..25 to check two-digit legibility at thumb tile size
+document.getElementById('bLvl').onclick = ()=>{
+  player.lvl = player.lvl >= LVL_MAX ? 1 : player.lvl + 1;
+  hud();
+};
 document.getElementById('bTheme').onclick = e=>{
   const k = Object.keys(THEMES);
   theme = k[(k.indexOf(theme)+1)%k.length];
