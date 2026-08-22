@@ -24,6 +24,7 @@ Every page carries a **Status** line using one of:
 - [[Tick Scheduler]]
 - [[Tap Input]]
 - [[Visual Treatments]]
+- [[Biomes]]
 - [[Progression]]
 - [[Platforms]]
 - [[Player Representation]]

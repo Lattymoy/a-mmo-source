@@ -50,7 +50,8 @@
   <span class="stat" id="inv">— — —</span>
   <span class="sp"></span>
   <button class="tog" id="bLvl">lvl+</button>
-  <button class="tog" id="bTheme">phosphor</button>
+  <button class="tog" id="bBiome">uncorrupt</button>
+  <button class="tog" id="bTheme">board</button>
   <button class="tog" id="bCam">close</button>
   <button class="tog" id="bNew">new</button>
 </div>
@@ -456,7 +457,17 @@ const THEMES = {
     glow:0, lit:'#4E9AC4', grid:true
   },
 };
-let theme = 'phosphor', cam = 'close';
+/* Biome is COLOUR ONLY. Theme owns treatment — background, glyphs, glow, grid,
+   entity colours. Biome owns the terrain palette. Same map, same glyphs, a
+   different world. Band names are Raum's, verified from project-raum. */
+const BIOMES = {
+  none:      null,
+  uncorrupt: {floor:'#4A6B5A', wall:'#7E9B88', mem:'#161F1A', cell:'#111A15', flora:'#8FCF7A'},
+  corrupt:   {floor:'#6B5A72', wall:'#9B84A4', mem:'#1C1622', cell:'#17111D', flora:'#B08A4A'},
+  shaped:    {floor:'#55697E', wall:'#8FA6BE', mem:'#141B23', cell:'#0E151D', flora:'#7FD4E8'},
+};
+
+let theme = 'board', cam = 'close', biome = 'uncorrupt';
 const COLS = {close:11, tactical:25};
 
 /* ───────────────────────── render ───────────────────────── */
@@ -481,7 +492,7 @@ function pos(e,now){
 }
 
 function draw(now){
-  const T = THEMES[theme];
+  const T = BIOMES[biome] ? Object.assign({}, THEMES[theme], BIOMES[biome]) : THEMES[theme];
   ctx.save(); ctx.scale(dpr,dpr);
   const w = cv.width/dpr, h = cv.height/dpr;
   ctx.fillStyle = T.bg; ctx.fillRect(0,0,w,h);
@@ -633,6 +644,11 @@ cv.addEventListener('pointerdown', ev=>{
 document.getElementById('bLvl').onclick = ()=>{
   player.lvl = player.lvl >= LVL_MAX ? 1 : player.lvl + 1;
   hud();
+};
+document.getElementById('bBiome').onclick = e=>{
+  const k = Object.keys(BIOMES);
+  biome = k[(k.indexOf(biome)+1)%k.length];
+  e.target.textContent = biome;
 };
 document.getElementById('bTheme').onclick = e=>{
   const k = Object.keys(THEMES);

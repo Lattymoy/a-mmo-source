@@ -1,6 +1,6 @@
 # Visual Treatments
 
-**Status:** `BUILT` — three readings of one simulation, none chosen
+**Status:** `BUILT` — three readings of one simulation · obstacle treatment chosen
 
 Mac stated the grid could be "maybe ASCII, or maybe just a simple black grid".
 [[tap-grid]] ships three treatments behind a toggle so that choice can be made by
@@ -11,6 +11,19 @@ looking rather than arguing.
 | `phosphor` | CRT bloom. Green-cyan glyphs, glow on entities, near-black field. |
 | `bone` | Crisp and warm. Bone-white glyphs, rust monsters, no glow. |
 | `board` | Filled cells with gutters. Reads as a physical game board, not a terminal. |
+
+## Obstacles
+
+**Status:** `STATED`
+
+**The board treatment is Mac's preferred use of obstacles.** Walls as filled
+cells (`▓`) with gutters, rather than as `#` floating on a dark field.
+
+`board` is now the prototype default. The other two treatments stay for
+comparison, not as candidates.
+
+Note the split this creates with [[Biomes]]: `board` is a *treatment* choice.
+Obstacle colour still comes from the biome.
 
 ## Signature: the arm hush
 
@@ -33,4 +46,4 @@ Constraint on record: a thumb needs roughly 9mm of tile, which puts a phone at
 about 9×14 visible tiles. Whether the game is tight and dungeon-like or has a
 zoomable overworld is [[Open Questions|unanswered]].
 
-Related: [[Tap Input]]
+Related: [[Biomes]] · [[Tap Input]] · [[Platforms]]
