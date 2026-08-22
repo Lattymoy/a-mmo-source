@@ -16,9 +16,24 @@
 
 import { DENSITY as SPRITE_DENSITY } from './gear-sprites.js';
 
-// the game's one pixel size, shared with every gear sprite
-export const DENSITY = SPRITE_DENSITY;
+/* The buffer must blit at an INTEGER upscale, or the pixel grid dies.
+
+   At the gear sprites' density (37.5 px/tile) against a ~35px tile the avatar
+   was being DOWNSCALED on blit. Nearest-neighbour downscaling drops pixels
+   irregularly: the stair-steps break up and the result reads as noise however
+   carefully the shapes are drawn.
+
+   So the avatar picks a resolution that divides the tile evenly and blits at
+   exactly that whole-number scale. Every art pixel becomes exactly N screen
+   pixels. This is the avatar only — gear sprites are untouched. */
 const SPAN = 2.4;                                   // tiles the buffer covers
+const SCREEN_PX_PER_ART_PX = 2;                     // chunkiness
+
+export const SPRITE_PX_PER_TILE = SPRITE_DENSITY;
+let DENSITY = SPRITE_DENSITY;                       // set per frame from TS
+
+export const upscaleFor = TS =>
+  Math.max(2, Math.round(TS / (SPRITE_DENSITY / SCREEN_PX_PER_ART_PX)));
 
 export const AVATAR = {
   K:  '#151013',   // outline
@@ -39,8 +54,7 @@ const PAL = Object.values(AVATAR).map(h => [
 
 let buf = null, bctx = null, bsize = 0;
 
-function buffer(){
-  const px = Math.ceil(SPAN * DENSITY);
+function buffer(px){
   if(bsize !== px){
     buf = document.createElement('canvas');
     buf.width = buf.height = px;
@@ -199,7 +213,10 @@ const BODY_TONE = [AVATAR.G1, AVATAR.G2, AVATAR.G3, AVATAR.G4];
 /** Draws cape, body and hands as one pixel-art unit. Returns the blit rect so
  *  the caller can put the level digit on top at full resolution. */
 export function drawAvatar(ctx, e, ax, ay, ox, oy, TS, breath, alpha, bodyR, held){
-  const b = buffer();
+  const scale = upscaleFor(TS);
+  const px = Math.max(24, Math.round(SPAN * TS / scale));
+  DENSITY = px / SPAN;
+  const b = buffer(px);
   cape(b, e, ax, ay, breath);
   sphere(b, 0, 0, bodyR * breath, BODY_TONE);
   if(e.hands)
@@ -210,9 +227,9 @@ export function drawAvatar(ctx, e, ax, ay, ox, oy, TS, breath, alpha, bodyR, hel
     }
   quantize();
 
-  const size = SPAN * TS;
-  const sx = ax * TS - ox + TS/2 - size/2;
-  const sy = ay * TS - oy + TS/2 - size/2;
+  const size = px * scale;                          // exact integer upscale
+  const sx = Math.round(ax * TS - ox + TS/2 - size/2);
+  const sy = Math.round(ay * TS - oy + TS/2 - size/2);
   const prev = ctx.imageSmoothingEnabled;
   ctx.imageSmoothingEnabled = false;
   ctx.globalAlpha = alpha;

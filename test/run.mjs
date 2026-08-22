@@ -455,16 +455,23 @@ group('gear sprites');
 /* ── avatar ────────────────────────────────────────────────────────────── */
 group('avatar');
 {
-  const { AVATAR, DENSITY } = await import('../src/render/avatar.js');
+  const { AVATAR, SPRITE_PX_PER_TILE, upscaleFor } = await import('../src/render/avatar.js');
   const { SPRITES } = await import('../src/render/gear-sprites.js');
 
-  /* One pixel size for the whole game. If the avatar picked its own density,
-     the character and the sword it holds would visibly disagree about how big
-     a pixel is — the single loudest tell of assembled-from-parts art. */
+  /* Gear sprites still share ONE density between themselves. */
   for(const [id, sp] of Object.entries(SPRITES))
-    check(`${id} shares the avatar's pixel density`,
-          Math.abs(sp.rows.length / sp.tiles - DENSITY) < 1e-9,
-          `${(sp.rows.length / sp.tiles).toFixed(2)} vs ${DENSITY.toFixed(2)}`);
+    check(`${id} shares the gear pixel density`,
+          Math.abs(sp.rows.length / sp.tiles - SPRITE_PX_PER_TILE) < 1e-9,
+          `${(sp.rows.length / sp.tiles).toFixed(2)} vs ${SPRITE_PX_PER_TILE}`);
+
+  /* The avatar buffer must blit at a WHOLE-NUMBER upscale. Anything else
+     resamples the pixel grid — downscaling in particular drops stair-steps and
+     turns the cape into noise. */
+  for(const TS of [18, 24, 30, 35, 42, 60, 96]){
+    const scale = upscaleFor(TS);
+    check(`upscale at TS=${TS} is a whole number >= 2`,
+          Number.isInteger(scale) && scale >= 2, `${scale}`);
+  }
 
   check('avatar palette is small enough to read as pixel art',
         Object.keys(AVATAR).length <= 12, `${Object.keys(AVATAR).length} tones`);

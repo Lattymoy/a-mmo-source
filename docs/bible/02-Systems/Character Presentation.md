@@ -23,16 +23,28 @@ Quantization is not optional: canvas antialiases every path, so the low-res
 buffer alone gives blurry pixel art. Snapping alpha to 0/255 and clamping every
 colour to the palette is what makes it flat and hard-edged.
 
-### One pixel size for the whole game
+### The buffer must blit at a whole-number upscale
 
-Density is **derived from the gear sprites**, not chosen for the avatar. If the
-character picked its own, it and the sword in its hand would visibly disagree
-about how big a pixel is — the loudest tell of art assembled from parts.
+This is what decides whether the avatar reads as pixel art at all.
 
-A test asserts every sprite matches. It immediately caught the bow drawn at 25
-px/tile against the sword's 37.5, and the bow was redrawn larger rather than
-scaled. **Sprite size in the world is a consequence of pixel count, never of a
-scale factor.**
+Running the buffer at the gear sprites' density (37.5 px/tile) against a ~35px
+tile meant the avatar was **downscaled** on blit. Nearest-neighbour downscaling
+drops pixels irregularly: stair-steps break up and the result reads as noise no
+matter how carefully the shapes are drawn. The cape looked like flat vector
+shading because, effectively, it was being resampled into one.
+
+The avatar now picks a buffer resolution that divides the tile evenly and blits
+at exactly that integer scale, so every art pixel is exactly N screen pixels.
+Gated across a range of tile sizes.
+
+**Trade, recorded deliberately:** avatar pixels are now about twice the size of
+gear-sprite pixels. Gear was left untouched. Matching them would mean redrawing
+every weapon at half its pixel dimensions, which is a separate decision.
+
+Gear sprites still share one density **among themselves** — a test caught the
+bow drawn at 25 px/tile against the sword's 37.5, and it was redrawn larger
+rather than scaled. Sprite size in the world is a consequence of pixel count,
+never of a scale factor.
 
 ### The cape is a trapezoid, not a mantle
 
