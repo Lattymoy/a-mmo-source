@@ -23,6 +23,28 @@ Time only moves when someone acts, but nobody can stall it.
 - Action cost becomes a real design axis — a heavy weapon is slower than a light one.
 - Turn-based feel with real-time tolerance.
 
+## Pacing is a property of game time, not actor count
+
+**Status:** `BUILT` — root fix, 2026-08-22
+
+The first build paced the scheduler at one actor per 68ms of real time. That is
+wrong at the root: with 17 actors on the clock, the player's own turn came round
+roughly every seventeenth slot, so movement felt sluggish — and it would have
+degraded further with every monster added.
+
+**Fix:** the clock advances at a fixed real-time rate (`MS_PER_TICK`), and every
+actor whose turn has come due resolves in the same frame. Verified by
+simulation: player step rate holds at 14.3/sec across 0, 16, 64 and 256
+monsters.
+
+Current rate is 0.70ms per tick — a 100-tick step takes 70ms. Glyph slide is
+65ms so it lands just before the next step.
+
+**The idle rule still holds.** When the player has nothing queued the clock
+stops. Monsters do not get free turns while you think. In co-op another player
+acting is what advances it — which is the whole point of
+[[World Structure|the bounded party]].
+
 ## Prototype costs
 
 **Status:** `BUILT` — tuning values, not balance

@@ -68,8 +68,8 @@
 /* ───────────────────────── config ───────────────────────── */
 const W = 56, H = 56, FOV = 8;
 const LVL_MAX = 25;          // max level, base game
-const STEP_MS = 68;          // scheduler pace — readability, not simulation speed
-const MOVE_MS = 100;         // glyph slide duration
+const MS_PER_TICK = 0.70;    // real ms per game tick — a 100-tick step is 70ms
+const MOVE_MS = 65;          // glyph slide duration, lands just before the next step
 
 /* ───────────────────────── rng ───────────────────────── */
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
@@ -370,25 +370,28 @@ function monsterAct(m){
 /* ───────────────────────── scheduler ─────────────────────────
    Time only moves when someone acts, but nobody can stall it:
    an actor with nothing to do is skipped, not waited on.        */
-function tick(){
-  if(dead) return;
-  let a=null;
-  for(const e of ents) if(e.hp>0 && (!a || e.next<a.next)) a=e;
-  if(!a) return;
-  clock = Math.max(clock, a.next);
+// Wall-clock pace is a property of GAME TIME, not of how many actors exist.
+// The clock advances at a fixed real-time rate; every actor whose turn has come
+// due resolves in the same frame. Adding monsters no longer slows the player.
+function drain(){
+  for(let guard=0; guard<512; guard++){
+    let a=null;
+    for(const e of ents) if(e.hp>0 && (!a || e.next<a.next)) a=e;
+    if(!a || a.next > clock) return;
 
-  if(a.you){
-    const cost = playerAct();
-    if(cost===0){ waiting = true; return }
-    a.next = clock + cost;
-    computeFOV();
-    if(armed) valid = validSet(armed);
-  } else {
-    a.next = clock + monsterAct(a);
+    if(a.you){
+      const cost = playerAct();
+      if(cost===0){ waiting = true; return }   // nothing to do: hold the clock
+      a.next += cost;
+      computeFOV();
+      if(armed) valid = validSet(armed);
+    } else {
+      a.next += monsterAct(a);
+    }
+    ents = ents.filter(e=>e.hp>0||e.you);
+    hud();
+    if(dead) return;
   }
-  waiting = false;
-  ents = ents.filter(e=>e.hp>0||e.you);
-  hud();
 }
 
 /* ───────────────────────── input ───────────────────────── */
@@ -611,9 +614,18 @@ function drawLog(){
 }
 
 /* ───────────────────────── loop ───────────────────────── */
-let last = 0;
+let lastT = 0;
 function frame(now){
-  if(!waiting && now-last > STEP_MS){ tick(); last = now }
+  if(dead || waiting){
+    lastT = 0;                                  // resume cleanly, no dt spike
+  } else if(!lastT){
+    lastT = now;
+  } else {
+    const dt = Math.min(now - lastT, 250);      // clamp after a backgrounded tab
+    lastT = now;
+    clock += dt / MS_PER_TICK;
+    drain();
+  }
   draw(now);
   requestAnimationFrame(frame);
 }
