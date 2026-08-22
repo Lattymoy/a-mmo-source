@@ -117,6 +117,27 @@ constraints cannot fight each other.
 
 Gated on every frame of motion, not just at rest.
 
+### Each hand keeps to its own side
+
+**Status:** `STATED` — the hands must not clash into each other when turning.
+
+Turning sweeps both targets across the body, and world-space springs follow them
+straight through one another. Measured on the pre-fix build: the two nubs
+overlapped completely (separation 0.000) on 375 frames of a spin.
+
+A mutual-repulsion nudge would fight the spring. Instead the bound is
+**per-component in facing space**: `fwd` is clamped so a nub never falls behind,
+and `lat` is clamped **to its own side of the centreline**, so crossing is
+impossible by construction rather than by tuning. A single radius clamp cannot
+express "own side", which is why the earlier shell let this through.
+
+The lag survives in full — it just runs within these bounds.
+
+**The gap in the suite was that nothing ever turned.** Every hand check walked
+in a straight line. There are now spin and zigzag cases asserting, on every
+frame, that the nubs keep clear air between them and never cross the centreline.
+Both fail loudly against the old code.
+
 ### The gap is a budget, not a number
 
 First pass left 0.02 tiles between nub and ring — technically not overlapping,

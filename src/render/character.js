@@ -222,9 +222,14 @@ export const HAND_R   = 0.10;   // nub radius in tiles
 const HAND_STIFF = 0.20;        // pull toward the target
 const HAND_DAMP  = 0.87;        // low enough to overshoot, high enough to settle
 const HAND_DRIFT = 0.032;       // independent idle float, tiles
-const HAND_LEASH = 0.95;        // never trail further than this from the body
-export const HAND_FWD_MIN = 0.30; // and never fall behind: the nubs lag, but the
-                                // lag is lateral and radial, never backward
+/* Bounds are per-COMPONENT in facing space, not a single radius. A radius
+   clamp alone cannot express "each hand keeps to its own side", which is the
+   rule that stops them clashing when the character turns. */
+export const HAND_FWD_MIN = 0.30;  // never falls behind
+export const HAND_FWD_MAX = 0.80;
+export const HAND_LAT_MIN = 0.28;  // never crosses the centreline
+export const HAND_LAT_MAX = 0.62;
+export const HAND_LEASH   = 1.02;  // implied by the caps above
 // nor drift closer: body + its keyline + the visible gap + the nub + its keyline
 export const HAND_MIN = BODY_R + KEYLINE + HAND_GAP + HAND_R;
 
@@ -241,6 +246,8 @@ export function handTargets(e, ax, ay, gait){
     ];
   });
 }
+
+const clamp = (v, lo, hi) => v < lo ? lo : (v > hi ? hi : v);
 
 export function initHands(e, ax, ay){
   const t = handTargets(e, ax, ay, 0);
@@ -276,34 +283,38 @@ export function updateHands(e, ax, ay, now, dt, gait){
     h.x += vx * k;
     h.y += vy * k;
 
-    /* Held in a shell around the body, and always IN FRONT of it. Solved in
-       facing space rather than world space: `fwd` is how far ahead the nub is,
-       `lat` how far to the side. A spring alone drags the nubs backward past
-       the wearer whenever they set off, which reads as the character towing two
-       balloons. The lag is kept — it just cannot go behind. */
+    /* Held in front of the body and each on its own side, solved in FACING
+       space: `fwd` is how far ahead the nub is, `lat` how far to the side.
+
+       A spring in world space drags the nubs backward whenever the character
+       sets off, and swings them THROUGH each other whenever the character
+       turns — the two targets sweep across the body and the springs follow.
+       Confining each nub to its own side of the centreline makes clashing
+       impossible by construction rather than by tuning. The lag survives in
+       full; it just runs within these bounds. */
+    const side = i === 0 ? -1 : 1;
     const px_ = -fy, py_ = fx;
     const ox_ = h.x - ax, oy_ = h.y - ay;
-    let fwd = ox_ * fx + oy_ * fy;
-    let lat = ox_ * px_ + oy_ * py_;
 
-    fwd = Math.max(fwd, HAND_FWD_MIN);
+    let fwd = clamp(ox_ * fx + oy_ * fy, HAND_FWD_MIN, HAND_FWD_MAX);
+    let mag = clamp(side * (ox_ * px_ + oy_ * py_), HAND_LAT_MIN, HAND_LAT_MAX);
 
-    const d = Math.hypot(fwd, lat) || 1;
-    if(d > HAND_LEASH){
-      const k2 = HAND_LEASH / d;
-      fwd *= k2; lat *= k2;
-      if(fwd < HAND_FWD_MIN){          // shrinking broke the floor: take it out of lat
-        fwd = HAND_FWD_MIN;
-        const room = HAND_LEASH*HAND_LEASH - fwd*fwd;
-        lat = Math.sign(lat) * Math.sqrt(Math.max(0, room));
-      }
-    } else if(d < HAND_MIN){
-      const k2 = HAND_MIN / d;         // scaling up only ever increases fwd
-      fwd *= k2; lat *= k2;
+    // radial floor last: this is the detachment gap from the body
+    let r = Math.hypot(fwd, mag);
+    if(r < HAND_MIN){
+      const up = HAND_MIN / r;
+      fwd = Math.min(HAND_FWD_MAX, fwd * up);
+      mag = Math.min(HAND_LAT_MAX, mag * up);
+      if(Math.hypot(fwd, mag) < HAND_MIN)   // a cap absorbed it: take the rest
+        fwd = Math.min(HAND_FWD_MAX,
+                       Math.max(fwd, Math.sqrt(Math.max(0, HAND_MIN**2 - mag**2))));
+      if(Math.hypot(fwd, mag) < HAND_MIN)
+        mag = Math.min(HAND_LAT_MAX,
+                       Math.sqrt(Math.max(0, HAND_MIN**2 - fwd**2)));
     }
 
-    h.x = ax + fx * fwd + px_ * lat;
-    h.y = ay + fy * fwd + py_ * lat;
+    h.x = ax + fx * fwd + px_ * side * mag;
+    h.y = ay + fy * fwd + py_ * side * mag;
   }
 }
 

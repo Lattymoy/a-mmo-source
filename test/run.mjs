@@ -250,7 +250,8 @@ group('hands');
 {
   const { initCape, updateCape, initHands, updateHands, handTargets,
           HAND_R, HAND_LEASH, HAND_MIN, BODY_R, KEYLINE, HAND_GAP,
-          HAND_FWD_MIN, HAND_LAT } = await import('../src/render/character.js');
+          HAND_FWD_MIN, HAND_LAT, HAND_LAT_MIN } =
+    await import('../src/render/character.js');
 
   const e = { x: 5, y: 5, at: -9999 };
   initCape(e);
@@ -328,6 +329,37 @@ group('hands');
   const n0 = Math.hypot(...d0), n1 = Math.hypot(...d1);
   check('nubs drift independently', Math.abs(dot/(n0*n1)) < 0.97,
         `correlation ${(dot/(n0*n1)).toFixed(3)}`);
+
+  /* TURNING was the gap: every check above walks in a straight line, so nothing
+     caught the nubs sweeping through each other as the facing rotated. */
+  {
+    let minSep = Infinity, crossed = 0, tooClose = 0;
+    let tx = 20, ty = 20;
+    const need = HAND_R*2 + KEYLINE + HAND_GAP*2;
+    for(let f = 0; f < 1500; f++){
+      // spin, then zigzag — both make the targets sweep across the body
+      const a = f < 700 ? f / 22 : (Math.floor(f/9) % 2 ? 0.4 : Math.PI - 0.4);
+      tx += Math.cos(a) * 0.11;
+      ty += Math.sin(a) * 0.11;
+      e.x = Math.round(tx); e.y = Math.round(ty);
+      updateCape(e, tx, ty, f*16.67, 16.67);
+      updateHands(e, tx, ty, f*16.67, 16.67, Math.sin(f/6));
+
+      const [h0, h1] = e.hands;
+      const sep = Math.hypot(h0.x-h1.x, h0.y-h1.y);
+      minSep = Math.min(minSep, sep);
+      if(sep - HAND_R*2 - KEYLINE < HAND_GAP*2 - 1e-9) tooClose++;
+
+      // each nub must stay on its own side of the centreline
+      const px = -e.face.y, py = e.face.x;
+      const l0 = (h0.x-tx)*px + (h0.y-ty)*py;
+      const l1 = (h1.x-tx)*px + (h1.y-ty)*py;
+      if(l0 > -HAND_LAT_MIN + 1e-9 || l1 < HAND_LAT_MIN - 1e-9) crossed++;
+    }
+    check('hands never clash while turning', tooClose === 0,
+          `${tooClose} frames, closest ${minSep.toFixed(3)} vs ${need.toFixed(3)}`);
+    check('hands never cross the centreline', crossed === 0, `${crossed} frames`);
+  }
 
   const [L2, R2] = handTargets(e, ax, ay, 1);
   const dL = ahead(L2) - ahead(handTargets(e, ax, ay, 0)[0]);
