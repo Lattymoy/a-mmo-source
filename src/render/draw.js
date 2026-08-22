@@ -57,11 +57,18 @@ function drawPlayer(ctx, e, sx, sy, T, now, breath){
   const r  = (held ? TS*0.28 : TS*0.40) * breath;
   const lf = held ? TS*0.32 : TS*0.44;
 
-  ctx.strokeStyle = T.you;
-  ctx.lineWidth = Math.max(1.3, TS * 0.07);
+  /* Filled, not just stroked: the cape passes behind the body and a hollow
+     ring would let cloth show through the level digit. */
   ctx.beginPath();
   ctx.arc(sx, sy, r, 0, Math.PI * 2);
+  ctx.fillStyle = T.bg;
+  ctx.globalAlpha = 0.92;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = T.you;
+  ctx.lineWidth = Math.max(1.3, TS * 0.07);
   ctx.stroke();
+  ctx.fillStyle = T.you;
 
   const lab = String(e.lvl);
   ctx.save();
@@ -170,7 +177,7 @@ export function draw(now){
       const lean = gait * TS * 0.05;
       const bob  = gait * TS * 0.06;
       updateCape(e, ex, ey, now, dt);
-      drawCape(ctx, e, ox, oy, TS, T.cape, dim, breath);
+      drawCape(ctx, e, ox, oy, TS, T.cape, dim, breath, T.bg);
       ctx.globalAlpha = 1;
       ctx.fillStyle = T.you;
       if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = T.you }
