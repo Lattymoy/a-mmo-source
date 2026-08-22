@@ -6,7 +6,8 @@ A mobile game. Simple on the surface, complex under the hood.
 
 ## Setting
 
-You exist in the world of **Raum**, after a major collapse of civilization.
+You exist in the world of **Raum** ([[Raum]] — shared with `project-raum`), after a
+major collapse of civilization.
 Humanity gathers within a hub. The shared world begins there.
 
 ## Framing
@@ -32,4 +33,4 @@ Looking **simpler on the surface, deeper underneath**.
 Scavenge flora is stated as a pillar but has no system behind it, and its
 relationship to boss materials is unresolved. See [[Open Questions]].
 
-Related: [[World Structure]] · [[Progression]] · [[Tap Input]] · [[Prior Art]]
+Related: [[Raum]] · [[World Structure]] · [[Progression]] · [[Tap Input]] · [[Prior Art]]

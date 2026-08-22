@@ -22,7 +22,13 @@
    matchmade party size is not stated.
 7. **Hub as shared space.** The hub is where "the shared world begins" — whether
    players see each other in it, and how many, is not stated.
-8. **Zone generation.** "Procedural zone-based areas" is stated. What varies
+8. **Desktop input.** Whether desktop mirrors the tap grammar or gains keyboard
+   movement, and whether the lit-tile arming set survives on a platform that has
+   hover. See [[Platforms]].
+9. **Two hubs.** project-raum already has a hub — a single-player campsite,
+   marked COMPLETE. This project's hub is shared, with vendors and quests. Same
+   place, different place, or different era is not stated. See [[Raum]].
+10. **Zone generation.** "Procedural zone-based areas" is stated. What varies
    between zones — biome, layout, hazard, boss — is not.
 
 ## Resolved since
@@ -30,6 +36,8 @@
 - **Co-op scale** is now bounded: hub-and-instance with matchmade missions, not a
   persistent shared field. See [[World Structure]].
 - **Where gear comes from** is boss material. See [[Progression]].
+- **Boss framing on mobile** — the viewport enlarges. See [[Platforms]].
+- **Platforms** — desktop and mobile, not mobile-only.
 
 ## Standing call
 

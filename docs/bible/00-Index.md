@@ -16,6 +16,7 @@ Every page carries a **Status** line using one of:
 
 - [[Premise]]
 - [[World Structure]]
+- [[Raum]]
 - [[Prior Art]]
 
 ## Systems
@@ -24,6 +25,7 @@ Every page carries a **Status** line using one of:
 - [[Tap Input]]
 - [[Visual Treatments]]
 - [[Progression]]
+- [[Platforms]]
 
 ## Prototypes
 
