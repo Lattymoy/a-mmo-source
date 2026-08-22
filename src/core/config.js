@@ -7,8 +7,14 @@ export const FOV = 8;             // sight radius — see docs/bible Platforms: 
 
 export const LVL_MAX = 25;        // max level, base game
 
-export const MS_PER_TICK = 1.05;  // real ms per game tick; a 100-tick step is 105ms
-export const MOVE_MS = 95;        // glyph slide, lands just before the next step
+/* Pace. A 100-tick step is the unit: MS_PER_TICK * 100 is how long one step
+   takes in real time. Runtime-adjustable via S.msPerTick — the value is taste,
+   so it gets a dial rather than a guess. */
+export const MS_PER_TICK = 2.4;   // a 100-tick step is 240ms, ~4.2 steps/sec
+export const PACE_STEPS = [1.6, 2.0, 2.4, 3.0, 3.8];
+
+// the glyph slide always lands just before the next step, whatever the pace
+export const moveMsFor = msPerTick => msPerTick * 90;
 export const LUNGE_MS = 190;      // attack lunge and weapon swing
 export const SLASH_MS = 170;
 export const SHOT_MS = 190;

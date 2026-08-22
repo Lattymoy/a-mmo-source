@@ -37,14 +37,23 @@ actor whose turn has come due resolves in the same frame. Verified by
 simulation: player step rate holds at 14.3/sec across 0, 16, 64 and 256
 monsters.
 
-Rate is tuned by feel and then pinned by a test. 0.70ms/tick (70ms per step)
-read as too fast; it now sits at **1.05ms per tick — 105ms per step, about 9.5
-steps per second**. The glyph slide is 95ms so it lands just before the next
-step.
+### Pace is taste, so it gets a dial
 
-The suite asserts the pace stays inside a readable band (7–12 steps/sec) rather
-than asserting a single number, so the value can be tuned without rewriting the
-gate, while a regression that divides pace by actor count still fails loudly.
+70ms per step read as too fast. 105ms still read as too fast. Rather than keep
+guessing at a constant, pace is **runtime-adjustable**: `S.msPerTick` with a
+`pace` control in the top bar cycling 6.3 / 5.0 / 4.2 / 3.3 / 2.6 steps per
+second.
+
+**Default is 2.4ms per tick — 240ms per step, ~4.2 steps/sec.**
+
+The glyph slide is derived, not configured (`moveMsFor`), so it always lands
+just before the next step at every pace. A hand-set slide would desync the
+moment the dial moved.
+
+The suite no longer asserts any particular speed — that would be gating taste.
+It asserts the scheduler **delivers the pace it was configured with**, at every
+position on the dial, and that the slide always finishes inside a step. A
+regression that divides pace by actor count still fails loudly.
 
 **The idle rule still holds.** When the player has nothing queued the clock
 stops. Monsters do not get free turns while you think. In co-op another player

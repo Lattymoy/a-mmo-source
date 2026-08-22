@@ -1,4 +1,4 @@
-import { MOVE_MS, MONO } from '../core/config.js';
+import { MONO } from '../core/config.js';
 import { idx, inB } from '../core/grid.js';
 import { S } from '../core/state.js';
 import { GROUND } from '../world/ground.js';
@@ -11,7 +11,7 @@ let lastDraw = 0;
 /* Interpolated position: the move slide, with any lunge riding on top. */
 export function pos(e, now){
   let x = e.x, y = e.y;
-  const t = (now - e.at) / MOVE_MS;
+  const t = (now - e.at) / S.moveMs;
   if(t < 1){ const k = t*t*(3 - 2*t); x = e.ax + (e.x - e.ax)*k; y = e.ay + (e.y - e.ay)*k }
   if(e.lg){
     const u = (now - e.lg.t0) / e.lg.dur;
@@ -172,7 +172,7 @@ export function draw(now){
 
     if(e.you){
       const breath = breathT(e, now);
-      const gait = gaitT(e, now, MOVE_MS);
+      const gait = gaitT(e, now, S.moveMs);
       // weight shifts back as the step lands, and the body rises a touch
       const lean = gait * TS * 0.05;
       const bob  = gait * TS * 0.06;

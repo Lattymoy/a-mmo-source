@@ -1,4 +1,4 @@
-import { MS_PER_TICK, LVL_MAX } from './core/config.js';
+import { LVL_MAX, PACE_STEPS, moveMsFor } from './core/config.js';
 import { reseed } from './core/rng.js';
 import { S, resetRun } from './core/state.js';
 import { genMap, openTiles } from './world/mapgen.js';
@@ -39,7 +39,7 @@ function frame(now){
   } else {
     const dt = Math.min(now - lastT, 250);    // clamp after a backgrounded tab
     lastT = now;
-    S.clock += dt / MS_PER_TICK;
+    S.clock += dt / S.msPerTick;
     drain(hud);
   }
   draw(now);
@@ -78,6 +78,15 @@ export function boot(){
   $('bLvl').onclick = () => {
     S.player.lvl = S.player.lvl >= LVL_MAX ? 1 : S.player.lvl + 1;
     hud();
+  };
+  // dev: dial the pace by feel rather than guessing at a constant
+  const paceLabel = () => `${(1000 / (100 * S.msPerTick)).toFixed(1)}/s`;
+  $('bPace').textContent = paceLabel();
+  $('bPace').onclick = e => {
+    const i = PACE_STEPS.indexOf(S.msPerTick);
+    S.msPerTick = PACE_STEPS[(i + 1) % PACE_STEPS.length];
+    S.moveMs = moveMsFor(S.msPerTick);
+    e.target.textContent = paceLabel();
   };
   $('bBiome').onclick = e => { S.biome = cycle(BIOMES, S.biome); e.target.textContent = S.biome };
   $('bTheme').onclick = e => { S.theme = cycle(THEMES, S.theme); e.target.textContent = S.theme };

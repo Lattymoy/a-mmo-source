@@ -2,7 +2,7 @@ import { check, group, report, newWorld } from './harness.mjs';
 
 const { S, openCount } = await newWorld(20260822);
 
-const { W, H, MS_PER_TICK } = await import('../src/core/config.js');
+const { W, H, PACE_STEPS, moveMsFor } = await import('../src/core/config.js');
 const { idx }        = await import('../src/core/grid.js');
 const { GROUND }     = await import('../src/world/ground.js');
 const { KINDS }      = await import('../src/game/kinds.js');
@@ -121,12 +121,12 @@ group('abilities');
 group('scheduler');
 {
   // player pace must NOT depend on how many actors are on the clock
-  const rate = (nMon) => {
+  const rate = (nMon, msPerTick = S.msPerTick) => {
     const ents = [{ you: true, next: 0 }];
     for(let i = 0; i < nMon; i++) ents.push({ you: false, next: 0, spd: [70,85,160][i%3] });
     let clock = 0, steps = 0;
     for(let t = 0; t < 10000; t += 16.67){
-      clock += 16.67 / MS_PER_TICK;
+      clock += 16.67 / msPerTick;
       for(let g = 0; g < 512; g++){
         let a = null;
         for(const e of ents) if(!a || e.next < a.next) a = e;
@@ -140,9 +140,20 @@ group('scheduler');
   check('pace independent of actor count',
         [16, 64, 256].every(n => rate(n) === base),
         `0:${base} 16:${rate(16)} 64:${rate(64)} 256:${rate(256)}`);
-  // a readable walking pace: fast enough not to drag, slow enough to follow
+  /* Pace itself is taste and gets a dial, so the gate is that the scheduler
+     DELIVERS the configured rate rather than that the rate is any one number. */
   const perSec = base / 10;
-  check('pace is readable', perSec > 7 && perSec < 12, `${perSec.toFixed(1)} steps/sec`);
+  const want = 1000 / (100 * S.msPerTick);
+  check('scheduler delivers the configured pace', Math.abs(perSec - want) / want < 0.05,
+        `${perSec.toFixed(2)}/s vs ${want.toFixed(2)}/s`);
+  check('every pace step is deliverable',
+        PACE_STEPS.every(ms => {
+          const got = rate(24, ms) / 10, exp = 1000 / (100 * ms);
+          return Math.abs(got - exp) / exp < 0.05;
+        }),
+        PACE_STEPS.map(ms => (1000/(100*ms)).toFixed(1) + '/s').join(' '));
+  check('slide always lands before the next step',
+        PACE_STEPS.every(ms => moveMsFor(ms) < ms * 100));
 }
 
 /* ── entities ──────────────────────────────────────────────────────────── */

@@ -1,7 +1,13 @@
 /* One mutable world. Exported as an object rather than as `let` bindings so
    every module reads the same live values without import cycles. */
 
+import { MS_PER_TICK, moveMsFor } from './config.js';
+
 export const S = {
+  // pace, adjustable at runtime
+  msPerTick: MS_PER_TICK,
+  moveMs: moveMsFor(MS_PER_TICK),
+
   // terrain
   wall:  null,   // Uint8Array, 1 = solid
   wface: null,   // Uint8Array, 0 = buried rock, else 1 + connection mask
