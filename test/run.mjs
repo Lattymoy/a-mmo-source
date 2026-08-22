@@ -235,17 +235,20 @@ group('cape');
 /* ── hands ─────────────────────────────────────────────────────────────── */
 group('hands');
 {
-  const { initCape, updateCape, handPositions, HAND_FWD, HAND_R, SHOULDER } =
-    await import('../src/render/character.js');
+  const { initCape, updateCape, initHands, updateHands, handTargets,
+          HAND_R, HAND_LEASH, HAND_MIN } = await import('../src/render/character.js');
 
   const e = { x: 5, y: 5, at: -9999 };
   initCape(e);
-  // drive east so facing is unambiguous
   let ax = 5, ay = 5;
   for(let f = 0; f < 200; f++){ ax += 0.05; updateCape(e, ax, ay, f*16.67, 16.67) }
+  initHands(e, ax, ay);
+  for(let f = 0; f < 300; f++) updateHands(e, ax, ay, f*16.67, 16.67, 0);
 
-  const [L, R] = handPositions(e, ax, ay, 0);
   const ahead = p => (p[0]-ax)*e.face.x + (p[1]-ay)*e.face.y;
+  const H = () => e.hands.map(h => [h.x, h.y]);
+
+  const [L, R] = H();
   check('both hands are in FRONT', ahead(L) > 0 && ahead(R) > 0,
         `${ahead(L).toFixed(2)}, ${ahead(R).toFixed(2)}`);
 
@@ -256,15 +259,52 @@ group('hands');
   const sep = Math.hypot(L[0]-R[0], L[1]-R[1]);
   check('hands do not overlap each other', sep > HAND_R * 2, `${sep.toFixed(3)}`);
 
-  // hands must sit opposite the cape, or facing reads ambiguously
   const mid = e.cape[(e.cape.length/2)|0];
   const tip = mid[mid.length-1];
   check('hands oppose the cape', ahead([tip.x, tip.y]) < 0,
         `cape at ${ahead([tip.x, tip.y]).toFixed(2)}`);
 
-  // they swing in opposition through a step
-  const [L2, R2] = handPositions(e, ax, ay, 1);
-  const dL = ahead(L2) - ahead(L), dR = ahead(R2) - ahead(R);
+  // the point of the rework: they must NOT be rigidly attached
+  let maxLag = 0, leashBreak = 0;
+  for(let f = 0; f < 400; f++){
+    ax += 0.09;                                   // set off at speed
+    e.x = Math.round(ax);
+    updateCape(e, ax, ay, (300+f)*16.67, 16.67);
+    updateHands(e, ax, ay, (300+f)*16.67, 16.67, 0);
+    const t = handTargets(e, ax, ay, 0);
+    for(let i = 0; i < 2; i++){
+      maxLag = Math.max(maxLag, Math.hypot(e.hands[i].x - t[i][0], e.hands[i].y - t[i][1]));
+      const dd = Math.hypot(e.hands[i].x - ax, e.hands[i].y - ay);
+      if(dd > HAND_LEASH + 1e-9 || dd < HAND_MIN - 1e-9) leashBreak++;
+    }
+  }
+  check('hands lag the body, not welded to it', maxLag > 0.04, `max lag ${maxLag.toFixed(3)} tiles`);
+  check('nubs stay in their shell', leashBreak === 0, `${leashBreak} frames`);
+
+  // and they must still settle, or they would jitter forever
+  for(let f = 0; f < 600; f++) updateHands(e, ax, ay, (700+f)*16.67, 16.67, 0);
+  const t2 = handTargets(e, ax, ay, 0);
+  const settle = Math.max(
+    Math.hypot(e.hands[0].x - t2[0][0], e.hands[0].y - t2[0][1]),
+    Math.hypot(e.hands[1].x - t2[1][0], e.hands[1].y - t2[1][1]));
+  check('hands settle near target at rest', settle < 0.09, `${settle.toFixed(3)} tiles`);
+
+  // independent drift: the two must never move as one rigid pair
+  const d0 = [], d1 = [];
+  for(let f = 0; f < 400; f++){
+    const before = H();
+    updateHands(e, ax, ay, (1300+f)*16.67, 16.67, 0);
+    const after = H();
+    d0.push(after[0][0]-before[0][0]); d1.push(after[1][0]-before[1][0]);
+  }
+  const dot = d0.reduce((a,v,i)=>a+v*d1[i], 0);
+  const n0 = Math.hypot(...d0), n1 = Math.hypot(...d1);
+  check('nubs drift independently', Math.abs(dot/(n0*n1)) < 0.97,
+        `correlation ${(dot/(n0*n1)).toFixed(3)}`);
+
+  const [L2, R2] = handTargets(e, ax, ay, 1);
+  const dL = ahead(L2) - ahead(handTargets(e, ax, ay, 0)[0]);
+  const dR = ahead(R2) - ahead(handTargets(e, ax, ay, 0)[1]);
   check('hands swing in opposition', dL * dR < 0, `${dL.toFixed(3)} vs ${dR.toFixed(3)}`);
 }
 

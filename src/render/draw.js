@@ -4,7 +4,7 @@ import { S } from '../core/state.js';
 import { GROUND } from '../world/ground.js';
 import { palette } from './themes.js';
 import { view, canvas, context } from './camera.js';
-import { updateCape, drawCape, drawHands, breathT, gaitT } from './character.js';
+import { updateCape, drawCape, updateHands, drawHands, breathT, gaitT } from './character.js';
 
 let lastDraw = 0;
 
@@ -183,7 +183,8 @@ export function draw(now){
       if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = T.you }
       drawPlayer(ctx, e, sx - e.face.x * lean, sy - e.face.y * lean - bob, T, now, breath);
       // hands last: they float in front, so nothing may draw over them
-      drawHands(ctx, e, ex, ey, ox, oy, TS, T.you, dim, breath, T.bg, gait);
+      updateHands(e, ex, ey, now, dt, gait);
+      drawHands(ctx, e, ox, oy, TS, T.you, dim, breath, T.bg);
     }
     else ctx.fillText(e.glyph, sx, sy);
     ctx.shadowBlur = 0;

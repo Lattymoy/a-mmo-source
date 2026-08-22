@@ -87,19 +87,33 @@ This is the natural home for faction or material colour once either exists.
 **Status:** `STATED` — two little floating circles in front of the character,
 nubs standing in for left and right hands.
 
-They sit 0.44 tiles ahead of centre and 0.26 to either side, and they **swing in
-opposition through a step** — one leads while the other trails. That opposition
-is what makes a walk read as a walk rather than a slide.
+**They are not attached to the body.** Each nub is its own spring-damped body
+chasing a target point, so it lags when the character sets off, overshoots when
+they stop, and floats on its own idle cycle at a different rate and phase from
+its partner. Pinned at a fixed offset they read as painted-on dots; floating,
+they read as separate things travelling with the character.
+
+The target sits 0.44 tiles ahead of centre and 0.26 to either side, and the two
+**swing in opposition through a step** — one leads while the other trails. That
+opposition is what makes a walk read as a walk rather than a slide.
+
+Free-floating needs bounds at both ends. The nubs are held in a **shell**: a
+leash at 0.55 tiles so a dash cannot strand them across the room, and an inner
+floor at 0.52 so idle drift cannot push one over the level digit. Anywhere
+between, they float untouched.
 
 Together with the cape they do the real work: **hands lead, cloth trails**, so
 the character's facing is unmistakable from the silhouette alone, with no sprite
 rotation and no directional art. Gated by a test asserting the hands sit forward
 of centre and the cape's tip sits behind it.
 
-Geometry is a pure function (`handPositions`) kept separate from drawing, so
-these are assertions rather than opinions: both hands forward, both clear of the
-body ring at every level width, never overlapping each other, always opposing
-the cape.
+The target geometry is a pure function (`handTargets`) kept separate from the
+simulation, so these are assertions rather than opinions: both hands forward,
+both clear of the ring at every level width, never overlapping each other,
+always opposing the cape, always inside the shell, and — the point of the whole
+rework — measurably **lagging** the body rather than welded to it, while still
+settling rather than jittering forever. A correlation test asserts the two nubs
+never move as one rigid pair.
 
 ### Conflict to resolve
 

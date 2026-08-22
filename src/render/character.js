@@ -198,18 +198,29 @@ export function drawCape(ctx, e, ox, oy, TS, col, alpha, breath, bg){
 }
 
 /* ── THE HANDS
-   Two floating nubs carried in FRONT of the wearer — the exact opposite end of
-   the body from the cape, so together they state which way the character is
-   facing without any sprite rotation. They swing with the gait, opposite to one
-   another, which is what makes a walk read as a walk.
+   Two floating nubs carried in FRONT of the wearer — the opposite end of the
+   body from the cape, so together they state which way the character faces
+   without any sprite rotation.
 
-   Pure geometry, kept separate from drawing so it can be asserted. */
+   They are NOT attached. Each nub is its own spring-damped body chasing a
+   target point, so it lags when the character sets off, overshoots when they
+   stop, and drifts on its own idle cycle. Pinned at a fixed offset they read as
+   painted-on dots; floating, they read as separate things travelling with the
+   character. */
 export const HAND_FWD = 0.44;   // tiles ahead of centre — far enough that the
                                 // nubs clear the body ring at every level width
 export const HAND_LAT = 0.26;   // tiles to either side
 export const HAND_R   = 0.10;   // nub radius in tiles
+const HAND_STIFF = 0.20;        // pull toward the target
+const HAND_DAMP  = 0.87;        // low enough to overshoot, high enough to settle
+const HAND_DRIFT = 0.032;       // independent idle float, tiles
+const HAND_LEASH = 0.55;        // never trail further than this from the body
+export const HAND_MIN = 0.52;        // nor drift closer — a nub inside the ring would
+                                // sit on the level digit
 
-export function handPositions(e, ax, ay, gait){
+/* The ideal position — where a rigidly-attached hand would sit. Pure, so it can
+   be asserted, and so the spring has something to chase. */
+export function handTargets(e, ax, ay, gait){
   const fx = e.face.x, fy = e.face.y;
   const px = -fy, py = fx;                     // perpendicular to facing
   return [-1, 1].map(side => {
@@ -221,11 +232,56 @@ export function handPositions(e, ax, ay, gait){
   });
 }
 
-export function drawHands(ctx, e, ax, ay, ox, oy, TS, col, alpha, breath, bg, gait){
+export function initHands(e, ax, ay){
+  const t = handTargets(e, ax, ay, 0);
+  e.hands = t.map(([x, y]) => ({ x, y, px: x, py: y }));
+}
+
+export function updateHands(e, ax, ay, now, dt, gait){
   if(!e.face) return;
+  if(!e.hands) initHands(e, ax, ay);
+
+  const k = Math.min(dt / 16.67, 3);
+  const targets = handTargets(e, ax, ay, gait);
+
+  for(let i = 0; i < 2; i++){
+    const h = e.hands[i];
+    const [tx, ty] = targets[i];
+
+    // each nub floats on its own cycle — different rate and phase, so the two
+    // never bob in unison and never look like one rigid pair
+    const ph = now / (760 + i * 190) + i * 2.1 + (e.x * 0.7 + e.y * 1.3);
+    const dx = Math.cos(ph) * HAND_DRIFT;
+    const dy = Math.sin(ph * 1.3) * HAND_DRIFT;
+
+    let vx = (h.x - h.px) * HAND_DAMP;
+    let vy = (h.y - h.py) * HAND_DAMP;
+    h.px = h.x; h.py = h.y;
+
+    vx += ((tx + dx) - h.x) * HAND_STIFF * k;
+    vy += ((ty + dy) - h.y) * HAND_STIFF * k;
+
+    h.x += vx * k;
+    h.y += vy * k;
+
+    /* Held in a shell around the body: a leash so a dash cannot strand them
+       across the room, and an inner floor so idle drift cannot push a nub over
+       the level digit. Free to float anywhere between. */
+    const ox_ = h.x - ax, oy_ = h.y - ay;
+    const d = Math.hypot(ox_, oy_) || 1;
+    const clamped = Math.min(HAND_LEASH, Math.max(HAND_MIN, d));
+    if(clamped !== d){
+      h.x = ax + ox_ / d * clamped;
+      h.y = ay + oy_ / d * clamped;
+    }
+  }
+}
+
+export function drawHands(ctx, e, ox, oy, TS, col, alpha, breath, bg){
+  if(!e.hands) return;
   const r = TS * HAND_R * breath;
-  for(const [hx, hy] of handPositions(e, ax, ay, gait)){
-    const sx = hx * TS - ox + TS/2, sy = hy * TS - oy + TS/2;
+  for(const h of e.hands){
+    const sx = h.x * TS - ox + TS/2, sy = h.y * TS - oy + TS/2;
     ctx.beginPath();
     ctx.arc(sx, sy, r, 0, Math.PI * 2);
     ctx.globalAlpha = alpha * 0.9;
