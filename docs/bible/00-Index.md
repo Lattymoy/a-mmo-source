@@ -28,6 +28,7 @@ Every page carries a **Status** line using one of:
 - [[Progression]]
 - [[Platforms]]
 - [[Player Representation]]
+- [[Character Presentation]]
 - [[Equipment]]
 - [[Combat Presentation]]
 

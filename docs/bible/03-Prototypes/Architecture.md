@@ -13,7 +13,7 @@ src/
   core/             config, seeded rng, grid maths, shared state
   world/            mapgen, wall geometry, fov, pathing, ground items
   game/             entities, stats, abilities, actions, scheduler, input, fx
-  render/           themes and biomes, camera, canvas draw
+  render/           themes and biomes, camera, cape physics, canvas draw
   ui/               hud, equipment panel, log
 test/               headless harness + suite
 tools/              build helpers

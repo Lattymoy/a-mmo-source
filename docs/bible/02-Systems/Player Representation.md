@@ -61,4 +61,4 @@ Whether that survives at mobile thumb-tile size is a *look at it* question, not
 an argue-about-it question. `index.html` + `src/` has an `lvl+` control in the top bar
 that cycles 1→25 so the failure point can be found by eye.
 
-Related: [[Visual Treatments]] · [[Platforms]] · [[Open Questions]]
+Related: [[Character Presentation]] · [[Visual Treatments]] · [[Platforms]] · [[Open Questions]]

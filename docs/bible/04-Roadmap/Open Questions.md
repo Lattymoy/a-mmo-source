@@ -37,13 +37,15 @@
     carry exactly this. Not stated — do not assume it.
 12. **The heavy enemy.** Only the base `□` husk is stated. Whether larger
     enemies exist below boss scale, and what they look like, is not.
-13. **What levelling does.** Max 25 is stated. What a level grants — stats,
+13. **Cape weight on screen.** ~1.5 tiles of cloth per player. Untested with a
+    full party in view — see [[Character Presentation]].
+14. **What levelling does.** Max 25 is stated. What a level grants — stats,
     ability slots, gear tier access — is not.
-14. **Band vs. zone.** Raum's three bands are distance-banded in project-raum.
+15. **Band vs. zone.** Raum's three bands are distance-banded in project-raum.
     This game has missions into procedural zones ([[World Structure]]). Whether a
     zone is a band, sits inside one, or is unrelated is not stated. The
     [[Biomes]] palettes borrow band names for demonstration only.
-15. **Zone generation.** "Procedural zone-based areas" is stated. What varies
+16. **Zone generation.** "Procedural zone-based areas" is stated. What varies
    between zones — biome, layout, hazard, boss — is not.
 
 ## Resolved since

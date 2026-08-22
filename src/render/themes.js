@@ -2,6 +2,9 @@
    and entity colour. Biome owns the TERRAIN PALETTE only. They compose: any
    biome renders under any treatment.
 
+   `cape` is the wearer's own colour, not the zone's — it is the primary visual
+   equipment and the natural place for faction or material colour later.
+
    Entities and gear never take the biome tint. A husk that recolours per zone
    stops being instantly findable; a sword that turns violet gets lost on the
    floor. See docs/bible/02-Systems/Biomes.md. */
@@ -9,19 +12,19 @@ export const THEMES = {
   phosphor: {
     bg: '#05070A', floorGlyph: '\u00b7', wallGlyph: '#',
     floor: '#16342A', wall: '#2C6048', mem: '#0E2019',
-    you: '#9DFFD0', gear: '#CFE9FF', mon: '#FF9B7A', flora: '#7FE8A8', cell: null,
+    you: '#9DFFD0', cape: '#4FE0A4', gear: '#CFE9FF', mon: '#FF9B7A', flora: '#7FE8A8', cell: null,
     glow: 8, lit: '#63C4E8', grid: false,
   },
   bone: {
     bg: '#0B0A0C', floorGlyph: '.', wallGlyph: '#',
     floor: '#332C38', wall: '#6E6070', mem: '#1D1920',
-    you: '#F0E6D4', gear: '#D8B87A', mon: '#C4553A', flora: '#8CA85E', cell: null,
+    you: '#F0E6D4', cape: '#C4674E', gear: '#D8B87A', mon: '#C4553A', flora: '#8CA85E', cell: null,
     glow: 0, lit: '#D8A24C', grid: false,
   },
   board: {
     bg: '#080B0F', floorGlyph: '\u00b7', wallGlyph: '\u2593',
     floor: '#4A5C6A', wall: '#7E93A4', mem: '#222A33', cell: '#141B22',
-    you: '#EAF4FF', gear: '#E8C87A', mon: '#E86A5A', flora: '#6FBF8E',
+    you: '#EAF4FF', cape: '#5E9FD0', gear: '#E8C87A', mon: '#E86A5A', flora: '#6FBF8E',
     glow: 0, lit: '#4E9AC4', grid: true,
   },
 };

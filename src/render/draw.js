@@ -4,6 +4,9 @@ import { S } from '../core/state.js';
 import { GROUND } from '../world/ground.js';
 import { palette } from './themes.js';
 import { view, canvas, context } from './camera.js';
+import { updateCape, drawCape, breathT, gaitT } from './cape.js';
+
+let lastDraw = 0;
 
 /* Interpolated position: the move slide, with any lunge riding on top. */
 export function pos(e, now){
@@ -48,10 +51,10 @@ function drawWallFace(ctx, mask, sx, sy, col){
    Off hand left, main hand right, ring between. The ring shrinks when anything
    is held so all three fit one thumb-sized cell — that cost lands on the level
    digit, which was already the tightest thing at small sizes. */
-function drawPlayer(ctx, e, sx, sy, T, now){
+function drawPlayer(ctx, e, sx, sy, T, now, breath){
   const TS = view.TS;
   const held = (e.eq.main ? 1 : 0) + (e.eq.off ? 1 : 0);
-  const r  = held ? TS*0.28 : TS*0.40;
+  const r  = (held ? TS*0.28 : TS*0.40) * breath;
   const lf = held ? TS*0.32 : TS*0.44;
 
   ctx.strokeStyle = T.you;
@@ -86,6 +89,8 @@ function drawPlayer(ctx, e, sx, sy, T, now){
 export function draw(now){
   const ctx = context(), cv = canvas();
   if(!ctx) return;
+  const dt = lastDraw ? Math.min(now - lastDraw, 100) : 16.67;
+  lastDraw = now;
   const T = palette(S.theme, S.biome);
   const { dpr } = view;
 
@@ -158,7 +163,19 @@ export function draw(now){
     ctx.fillStyle = e.you ? T.you : T.mon;
     if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = ctx.fillStyle }
 
-    if(e.you) drawPlayer(ctx, e, sx, sy, T, now);
+    if(e.you){
+      const breath = breathT(e, now);
+      const gait = gaitT(e, now, MOVE_MS);
+      // weight shifts back as the step lands, and the body rises a touch
+      const lean = gait * TS * 0.05;
+      const bob  = gait * TS * 0.06;
+      updateCape(e, ex, ey, now, dt);
+      drawCape(ctx, e, ox, oy, TS, T.cape, dim, breath);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = T.you;
+      if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = T.you }
+      drawPlayer(ctx, e, sx - e.face.x * lean, sy - e.face.y * lean - bob, T, now, breath);
+    }
     else ctx.fillText(e.glyph, sx, sy);
     ctx.shadowBlur = 0;
 
