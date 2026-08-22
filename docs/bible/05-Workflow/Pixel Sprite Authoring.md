@@ -48,6 +48,15 @@ pixel-for-pixel against the committed data. Change one pixel in `author.mjs` and
 forget to regenerate, and the suite fails with `shield: pixels`. Verified by
 doing exactly that.
 
+## Dynamic things can be pixel art too
+
+Sprites cover static gear. Anything that moves every frame — the cape, the
+hand nubs, the body — goes through the **pixel buffer** in `avatar.js` instead:
+draw at the game's density into an offscreen canvas, quantize to a fixed palette
+with hard alpha, blit up with smoothing off.
+
+Same look, no authored frames, physics intact. See [[Character Presentation]].
+
 ## Rules that came out of the work
 
 - **Palette letters, not colours.** Rows are `K D M L H C`, resolved through a
@@ -63,6 +72,9 @@ doing exactly that.
   hangs from its handle and a bow from its riser, rather than everything
   floating by its centre. A test asserts the grip lands on a solid pixel; the
   bow's first grip fell in its hollow interior.
+- **One density for everything.** A sprite's world size is `rows / DENSITY`,
+  never a per-item scale factor. The bow was authored at 25 px/tile against the
+  sword's 37.5 and had to be redrawn larger, not scaled down.
 - **Detail that survives is detail that is 2px or more.** A one-pixel highlight
   at tile size is invisible; the same pixel doubled reads as a facet.
 

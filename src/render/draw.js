@@ -4,7 +4,8 @@ import { S } from '../core/state.js';
 import { GROUND } from '../world/ground.js';
 import { palette } from './themes.js';
 import { view, canvas, context } from './camera.js';
-import { updateCape, drawCape, updateHands, drawHands, breathT, gaitT } from './character.js';
+import { updateCape, updateHands, breathT, gaitT } from './character.js';
+import { drawAvatar } from './avatar.js';
 import { drawGearArt, hasArt, clearAnchor } from './gear.js';
 import { BODY_R, KEYLINE } from './character.js';
 
@@ -49,37 +50,27 @@ function drawWallFace(ctx, mask, sx, sy, col){
   ctx.stroke();
 }
 
-/* c○/   ○}   <○>
-   Off hand left, main hand right, ring between. The ring shrinks when anything
-   is held so all three fit one thumb-sized cell — that cost lands on the level
-   digit, which was already the tightest thing at small sizes. */
-function drawPlayer(ctx, e, sx, sy, T, now, breath){
+/* The level rides ON TOP of the avatar at full resolution rather than inside
+   the pixel buffer. At the game's pixel density a two-digit number would be
+   about six pixels tall and unreadable, and the level is the one thing that
+   must never be illegible. Outlined in the avatar's keyline colour so it holds
+   against the lit face of the sphere. */
+function drawLevel(ctx, e, sx, sy, breath){
   const TS = view.TS;
-  /* The ring keeps full size now that gear hangs off the hands instead of
-     crowding its sides — the level digit gets all the room back. */
-  const r  = TS * 0.40 * breath;
-  const lf = TS * 0.44;
-
-  /* Filled, not just stroked: the cape passes behind the body and a hollow
-     ring would let cloth show through the level digit. */
-  ctx.beginPath();
-  ctx.arc(sx, sy, r, 0, Math.PI * 2);
-  ctx.fillStyle = T.bg;
-  ctx.globalAlpha = 0.92;
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = T.you;
-  ctx.lineWidth = Math.max(1.3, TS * 0.07);
-  ctx.stroke();
-  ctx.fillStyle = T.you;
-
   const lab = String(e.lvl);
   ctx.save();
-  ctx.font = `${Math.floor(lf)}px ${MONO}`;
-  if(lab.length > 1){ ctx.translate(sx, sy); ctx.scale(0.66, 1); ctx.fillText(lab, 0, 0) }
-  else ctx.fillText(lab, sx, sy);
+  ctx.font = `700 ${Math.floor(TS * 0.40 * breath)}px ${MONO}`;
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(2, TS * 0.10);
+  ctx.strokeStyle = '#151013';
+  ctx.fillStyle = '#FFFFFF';
+  if(lab.length > 1){
+    ctx.translate(sx, sy); ctx.scale(0.66, 1);
+    ctx.strokeText(lab, 0, 0); ctx.fillText(lab, 0, 0);
+  } else {
+    ctx.strokeText(lab, sx, sy); ctx.fillText(lab, sx, sy);
+  }
   ctx.restore();
-
 }
 
 /* Gear is carried IN THE HANDS, so it inherits the nubs' float, lag and side
@@ -227,16 +218,12 @@ export function draw(now){
       const bob  = gait * TS * 0.06;
       updateCape(e, ex, ey, now, dt);
       updateHands(e, ex, ey, now, dt, gait);      // solve before anything draws on them
-      drawCape(ctx, e, ox, oy, TS, T.cape, dim, breath, T.bg);
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = T.you;
-      if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = T.you }
-      drawPlayer(ctx, e, sx - e.face.x * lean, sy - e.face.y * lean - bob, T, now, breath);
-      // hands and what they carry last: they float in front of everything
+      ctx.shadowBlur = 0;
       const twoHanded = e.eq.main && GROUND[e.eq.main].twoHand;
-      drawHands(ctx, e, ox, oy, TS, T.you, dim, breath, T.bg,
-                twoHanded ? [1, 1] : [e.eq.off, e.eq.main]);
+      drawAvatar(ctx, e, ex, ey, ox, oy, TS, breath, dim, 0.34,
+                 twoHanded ? [1, 1] : [e.eq.off, e.eq.main]);
       drawHeld(ctx, e, ox, oy, TS, T, now);
+      drawLevel(ctx, e, sx - e.face.x * lean, sy - e.face.y * lean - bob, breath);
     }
     else ctx.fillText(e.glyph, sx, sy);
     ctx.shadowBlur = 0;

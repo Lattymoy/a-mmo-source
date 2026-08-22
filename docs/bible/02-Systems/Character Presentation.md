@@ -1,6 +1,52 @@
 # Character Presentation
 
-**Status:** `STATED` · `BUILT` 2026-08-22
+**Status:** `STATED` · `BUILT` 2026-08-22 · rebuilt as pixel art from Mac's
+reference the same day.
+
+## The avatar is pixel art
+
+Reference supplied by Mac: a shaded white sphere for the body, two grey sphere
+nubs for hands, and a red pleated cape with a collar and a heavy black keyline.
+
+The hard part is that **the cape has to keep flowing**. It is a live verlet sim,
+not a pose, so it cannot be authored as sprite frames without losing the
+physics. Drawing it with canvas paths gives soft antialiased edges that read as
+vector art sitting next to the pixel gear.
+
+So the whole avatar is drawn into a **small offscreen buffer at the game's pixel
+density, quantized to a fixed palette with hard alpha, then blitted up with
+smoothing off**. Anything drawn into that buffer becomes pixel art — including
+geometry that changes every frame. The cape still simulates; it just resolves to
+hard pixels.
+
+Quantization is not optional: canvas antialiases every path, so the low-res
+buffer alone gives blurry pixel art. Snapping alpha to 0/255 and clamping every
+colour to the palette is what makes it flat and hard-edged.
+
+### One pixel size for the whole game
+
+Density is **derived from the gear sprites**, not chosen for the avatar. If the
+character picked its own, it and the sword in its hand would visibly disagree
+about how big a pixel is — the loudest tell of art assembled from parts.
+
+A test asserts every sprite matches. It immediately caught the bow drawn at 25
+px/tile against the sword's 37.5, and the bow was redrawn larger rather than
+scaled. **Sprite size in the world is a consequence of pixel count, never of a
+scale factor.**
+
+### The player's palette is fixed
+
+The avatar takes neither the theme nor the biome tint. It looks identical under
+every treatment and in every zone, because the one thing you must always find
+instantly on screen is yourself. See [[Biomes]].
+
+### The level rides on top
+
+The level digit is drawn **at full resolution over** the avatar, not inside the
+buffer. At 37.5 px/tile a two-digit number would be about six pixels tall and
+unreadable, and the level is the one thing that must never be illegible. It is
+outlined in the avatar's keyline colour so it holds against the lit face of the
+sphere.
 
 Stated:
 

@@ -452,4 +452,24 @@ group('gear sprites');
   })());
 }
 
+/* ── avatar ────────────────────────────────────────────────────────────── */
+group('avatar');
+{
+  const { AVATAR, DENSITY } = await import('../src/render/avatar.js');
+  const { SPRITES } = await import('../src/render/gear-sprites.js');
+
+  /* One pixel size for the whole game. If the avatar picked its own density,
+     the character and the sword it holds would visibly disagree about how big
+     a pixel is — the single loudest tell of assembled-from-parts art. */
+  for(const [id, sp] of Object.entries(SPRITES))
+    check(`${id} shares the avatar's pixel density`,
+          Math.abs(sp.rows.length / sp.tiles - DENSITY) < 1e-9,
+          `${(sp.rows.length / sp.tiles).toFixed(2)} vs ${DENSITY.toFixed(2)}`);
+
+  check('avatar palette is small enough to read as pixel art',
+        Object.keys(AVATAR).length <= 12, `${Object.keys(AVATAR).length} tones`);
+  check('every avatar tone is a hex colour',
+        Object.values(AVATAR).every(v => /^#[0-9A-Fa-f]{6}$/.test(v)));
+}
+
 report();

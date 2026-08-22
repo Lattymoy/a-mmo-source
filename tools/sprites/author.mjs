@@ -14,6 +14,13 @@
      K outline · D grain/shadow · M body · L lit face · H highlight · C sinew
 */
 
+/* ONE pixel size for the entire game. A sprite's size in the world is a
+   consequence of how many pixels it is drawn with — never of a scale factor
+   chosen per item. Getting this wrong is the loudest tell of art assembled from
+   parts: the bow's pixels were 50% bigger than the sword's. */
+export const DENSITY = 37.5;              // sprite pixels per tile
+const tilesFor = rows => rows.length / DENSITY;
+
 const blank = (w, h) => Array.from({ length: h }, () => Array(w).fill('.'));
 const put = (g, r, xs, cols) => xs.forEach((x, i) => { g[r][x] = cols[i] });
 
@@ -75,7 +82,8 @@ function sword(){
     put(g, r, [5,6,7], i % 2 === 0 ? ['M','L','M'] : ['D','M','D']));
   put(g, 27, [4,5,6,7,8], ['M','L','L','L','M']);
   put(g, 28, [4,5,6,7,8], ['D','D','M','D','D']);
-  return { rows: rows(outlineExterior(g)), grip: [6, 24], tiles: 0.80, material: 'wood' };
+  const r_ = rows(outlineExterior(g));
+  return { rows: r_, grip: [6, 24], tiles: tilesFor(r_), material: 'wood' };
 }
 
 /* ── wooden dagger 11x19
@@ -91,7 +99,8 @@ function dagger(){
   for(let x = 2; x < 9; x++){ g[12][x] = 'L'; g[13][x] = 'D' }
   [14,15,16,17].forEach((r, i) =>
     put(g, r, [4,5,6], i % 2 === 0 ? ['M','L','M'] : ['D','M','D']));
-  return { rows: rows(outlineExterior(g)), grip: [5, 16], tiles: 0.52, material: 'wood' };
+  const r_ = rows(outlineExterior(g));
+  return { rows: r_, grip: [5, 16], tiles: tilesFor(r_), material: 'wood' };
 }
 
 /* ── wooden shield 13x16
@@ -113,26 +122,30 @@ function shield(){
   for(const [r, xs] of [[5,[5,6,7]],[6,[5,6,7]],[7,[5,6,7]]])
     for(const x of xs) g[r][x] = 'D';
   g[5][6] = 'H'; g[6][5] = 'L'; g[6][6] = 'L'; g[6][7] = 'M';
-  return { rows: rows(outlineExterior(g)), grip: [6, 8], tiles: 0.42, material: 'wood' };
+  const r_ = rows(outlineExterior(g));
+  return { rows: r_, grip: [6, 8], tiles: tilesFor(r_), material: 'wood' };
 }
 
 /* ── wooden bow 15x11
    A strung arc: limbs bow away from the wearer, string chords the tips. The
    interior stays OPEN, which is the whole reason outlineExterior exists. */
 function bow(){
-  const g = blank(15, 11);
-  const arc = { 0:[6,8], 1:[5,9], 2:[4,10], 3:[3,11], 4:[2,12], 5:[1,13], 6:[1,13], 7:[1,13] };
+  const g = blank(21, 15);
+  const arc = { 0:[9,11], 1:[7,13], 2:[6,14], 3:[5,15], 4:[4,16],
+                5:[3,17], 6:[2,18], 7:[1,19], 8:[1,19], 9:[1,19], 10:[1,19] };
   for(const [rs, [a, c]] of Object.entries(arc)){
     const r = +rs;
     if(r === 0){ for(let x = a; x <= c; x++) g[r][x] = 'M' }
     else { g[r][a] = 'L'; g[r][c] = 'M' }
   }
-  g[0][7] = 'H';
-  for(const r of [5,6,7]){ g[r][1] = 'M'; g[r][13] = 'D' }
-  g[8][1] = 'D'; g[8][13] = 'D';                    // nocks
-  for(let x = 2; x < 13; x++) g[8][x] = 'C';        // string
-  g[1][7] = 'D'; g[2][7] = 'D';                     // bound riser
-  return { rows: rows(outlineExterior(g)), grip: [7, 2], tiles: 0.44, material: 'wood' };
+  for(let r = 1; r <= 3; r++){ g[r][arc[r][0]+1] = 'L'; g[r][arc[r][1]-1] = 'M' }
+  g[0][10] = 'H';
+  for(const r of [7,8,9,10]){ g[r][1] = 'M'; g[r][19] = 'D' }
+  g[11][1] = 'D'; g[11][19] = 'D';                  // nocks
+  for(let x = 2; x < 19; x++) g[11][x] = 'C';       // string chords the tips
+  for(const r of [1,2,3]) g[r][10] = 'D';           // bound riser
+  const r_ = rows(outlineExterior(g));
+  return { rows: r_, grip: [10, 3], tiles: tilesFor(r_), material: 'wood' };
 }
 
 export const MATERIALS = {
