@@ -24,11 +24,24 @@ function restart(){
   spawn(open);
   resetRun();
   closeEq();
-  // dev hook: start kitted out, for eyeballing held gear without hunting drops
+  /* Dev hooks, never set in normal play. __GEAR__ starts the player kitted out
+     and __LOOT__ scatters one of each item beside them, so visual probes can
+     inspect sprites without hunting the floor for drops. */
   if(globalThis.__GEAR__){
     S.player.inv = { sword: 1, shield: 1, bow: 1, daggerL: 1, daggerR: 1 };
     S.player.eq = { main: 'sword', off: 'shield' };
   }
+  if(globalThis.__LOOT__){
+    const around = [];
+    for(let dy = -2; dy <= 2; dy++) for(let dx = -2; dx <= 2; dx++){
+      const x = S.player.x + dx, y = S.player.y + dy;
+      if((dx || dy) && !S.wall[y * 56 + x]) around.push(y * 56 + x);
+    }
+    ['sword','shield','bow','daggerL','daggerR'].forEach((k, i) => {
+      if(around[i * 2]) S.ground.set(around[i * 2], k);
+    });
+  }
+  globalThis.__EQUIP__ = (main, off) => { S.player.eq = { main, off }; hud() };
   computeFOV();
   hud();
   say(`${open_} open tiles \u2014 ${S.ents.length - 1} hostiles`);

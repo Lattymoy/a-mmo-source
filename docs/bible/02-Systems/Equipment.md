@@ -92,40 +92,45 @@ real trade, because tick cost does not vary by weapon. See [[Open Questions]].
 
 ## Sprites
 
-**Status:** `BUILT` — wooden sword, 2026-08-22. First drawn gear.
+**Status:** `STATED` — reference supplied by Mac. `BUILT` 2026-08-22: wooden
+sword, shield, dagger and bow.
 
-Gear stops being a glyph the moment it is held. **On the ground a sword stays
-`/`** — the map is a glyph language and has to stay scannable — but in the hand
-it is drawn geometry, the same step the walls took in [[Visual Treatments]].
+**Gear is pixel art, in the hand and on the ground alike.** At a thumb-sized
+tile a vector curve turns to mush; a pixel grid stays crisp and is authored by
+eye. The first pass was drawn with beziers and was replaced outright.
 
-Sprites are defined in **tile units** in a local space pointing along -Y, and
-the caller has already translated to the hand and rotated to facing, so a sprite
-never needs to know which way anything points. Items with no sprite fall back to
-their glyph, so adding art is additive and can never break an undrawn item.
+Sprites are grids of palette **letters**, not colours, so one sprite renders in
+any material. Colour comes from the material because progression is material
+driven — bosses drop material, material builds weaponry ([[Progression]]). Only
+`wood` exists; no tier above it is invented.
 
-### Colour comes from material, not theme
+Each sprite declares a **grip**: the pixel the hand actually holds, so a sword
+hangs from its handle rather than its middle and a bow from its riser. Items
+with no sprite fall back to their map glyph, so adding art is additive.
 
-Progression is material driven — bosses drop material, material builds weaponry
-([[Progression]]) — so a weapon has to say what it is made of before any stat is
-read. `MATERIALS` holds the palette; only `wood` exists so far, and no tier
-above it is invented.
+### Clearance is a construction rule, not a size
 
-### The wooden sword
+Every sprite reaches BACKWARD from its grip, and the hand sits at a measured gap
+from the ring. The bow is the worst case: it is two-handed, held between the
+hands, and its riser sits well forward of its string, so it reaches 0.36 tiles
+back.
 
-Tapered leaf blade with a **flat tip** rather than a point — wood does not hold
-an edge, and the blunt tip is what says training weapon. One lit edge and a
-single off-centre grain line; two lines would read as a fuller, which is wrong
-for carved wood. Bound grip, dark crossguard, round pommel.
+Rather than shrink sprites until they happen to fit, the **anchor is pushed out**
+until the sprite clears (`clearAnchor`). True at any pace, facing, or hand
+position. Tested against an anchor placed exactly on the body — far worse than
+anything the hands can produce.
 
-Two constraints that are gated rather than eyeballed:
+### On the ground
 
-- **The pommel must not reach the body.** Grip and pommel extend *backward* from
-  the hand, and the hand sits at a measured gap from the ring. A longer tang
-  would silently close that gap and put the pommel over the level digit.
-- **Rest cant stays under 0.8 rad.** A weapon is held at an angle rather than
-  dead along facing, which otherwise reads as a permanent thrust — but a large
-  cant would swing the blade back across the wearer and undo the side
-  confinement that stops the hands clashing.
+Dropped gear draws as its sprite, lying at an angle derived from the tile index:
+deterministic so it never flickers between frames, varied so a floor of loot
+does not look like a rack. Only in direct view — remembered tiles stay glyphs,
+because memory is not detail.
+
+### Two-handers
+
+A two-hander is drawn once **between** the hands rather than in one of them, and
+occupies both, so neither shows a nub.
 
 ## Prototype state
 

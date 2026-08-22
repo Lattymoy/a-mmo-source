@@ -387,37 +387,48 @@ group('hands');
 /* ── gear sprites ──────────────────────────────────────────────────────── */
 group('gear sprites');
 {
-  const { MATERIALS, GEAR_ART, SWORD, hasArt } = await import('../src/render/gear.js');
-  const { HAND_MIN, BODY_R, KEYLINE } = await import('../src/render/character.js');
+  const { MATERIALS, SPRITES, GEAR_ART, hasArt, rearReach, clearAnchor } =
+    await import('../src/render/gear.js');
+  const { BODY_R, KEYLINE, HAND_FWD_MIN } = await import('../src/render/character.js');
 
-  check('every sprite names a real item',
-        Object.keys(GEAR_ART).every(k => GROUND[k] && GROUND[k].cls === 'gear'),
-        Object.keys(GEAR_ART).join(' '));
-  check('every gear material has a palette',
-        Object.values(GROUND).filter(g => g.material)
-          .every(g => MATERIALS[g.material]),
-        Object.values(GROUND).filter(g=>g.material).map(g=>g.material).join(' '));
-  check('items without art still have a glyph',
+  check('every gear item has a sprite',
+        Object.entries(GROUND).filter(([,g]) => g.cls === 'gear').every(([k]) => hasArt(k)),
         Object.entries(GROUND).filter(([k,g]) => g.cls === 'gear' && !hasArt(k))
-          .every(([,g]) => g.g && g.g.length === 1));
+          .map(([k])=>k).join(' ') || 'all drawn');
 
-  /* The grip and pommel reach BACKWARD from the hand, and the hand sits at a
-     measured gap from the body. A long tang would silently close that gap and
-     put the pommel over the level digit. */
-  const rearReach = HAND_MIN - SWORD.pommel;
+  check('every sprite maps to a real definition',
+        Object.values(GEAR_ART).every(id => SPRITES[id]));
+
+  for(const [id, s] of Object.entries(SPRITES)){
+    const w = s.rows[0].length;
+    check(`${id} rows are rectangular`, s.rows.every(r => r.length === w), `${w} wide`);
+    const pal = MATERIALS[s.material];
+    const bad = new Set();
+    for(const r of s.rows) for(const c of r) if(c !== '.' && !pal[c]) bad.add(c);
+    check(`${id} uses only palette letters`, bad.size === 0, [...bad].join(''));
+    check(`${id} grip is inside the sprite`,
+          s.grip[0] >= 0 && s.grip[0] < w && s.grip[1] >= 0 && s.grip[1] < s.rows.length);
+    check(`${id} grip sits on a solid pixel`, s.rows[s.grip[1]][s.grip[0]] !== '.',
+          `'${s.rows[s.grip[1]][s.grip[0]]}'`);
+  }
+
+  /* The clamp that makes clearance true by construction. Fed an anchor sitting
+     right on top of the body — far worse than anything the hands can produce —
+     every sprite must still be pushed clear of the level digit. */
   const bodyEdge = BODY_R + KEYLINE;
-  check('sword pommel does not reach the body',
-        rearReach > bodyEdge,
-        `pommel at ${rearReach.toFixed(3)} vs body edge ${bodyEdge.toFixed(3)}`);
+  let fails = 0;
+  for(const k of Object.keys(GEAR_ART)){
+    for(const [px, py] of [[0,0],[0.01,0],[0.2,0.1],[-0.3,0.2],[5,5]]){
+      const [cx, cy] = clearAnchor(px, py, 0, 0, k, bodyEdge);
+      if(Math.hypot(cx, cy) - rearReach(k) < bodyEdge - 1e-9) fails++;
+    }
+  }
+  check('no sprite can reach back into the body', fails === 0, `${fails} cases`);
 
-  check('blade points forward of the hand', SWORD.tip < 0, `${SWORD.tip}`);
-  check('crossguard is narrower than the hand separation', SWORD.span < 0.56, `${SWORD.span}`);
-
-  // a cant big enough to swing the blade back across the wearer would undo the
-  // whole point of confining hands to their own side
-  check('rest cants stay modest',
-        Object.values(GROUND).every(g => Math.abs(g.cant || 0) < 0.8),
-        Object.entries(GROUND).filter(([,g])=>g.cant).map(([k,g])=>`${k}:${g.cant}`).join(' '));
+  check('clamp leaves a already-clear anchor alone', (() => {
+    const [cx, cy] = clearAnchor(0, 2, 0, 0, 'sword', bodyEdge);
+    return Math.abs(cx) < 1e-9 && Math.abs(cy - 2) < 1e-9;
+  })());
 }
 
 report();

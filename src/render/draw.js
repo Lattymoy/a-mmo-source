@@ -5,7 +5,8 @@ import { GROUND } from '../world/ground.js';
 import { palette } from './themes.js';
 import { view, canvas, context } from './camera.js';
 import { updateCape, drawCape, updateHands, drawHands, breathT, gaitT } from './character.js';
-import { drawGearArt } from './gear.js';
+import { drawGearArt, hasArt, clearAnchor } from './gear.js';
+import { BODY_R, KEYLINE } from './character.js';
 
 let lastDraw = 0;
 
@@ -93,16 +94,26 @@ function drawHeld(ctx, e, ox, oy, TS, T, now){
   const sw = swingT(e, now);
   const base = Math.atan2(e.face.y, e.face.x) + Math.PI / 2;
 
+  const two = e.eq.main && GROUND[e.eq.main].twoHand;
+
   ctx.save();
   ctx.font = `${Math.floor(TS * 0.54)}px ${MONO}`;   // holds its weight beside the cape
   ctx.lineJoin = 'round';
-  ['off', 'main'].forEach((slot, i) => {
+
+  // a two-hander is held BETWEEN the hands, not in one of them
+  const slots = two ? [['main', 0]] : [['off', 0], ['main', 1]];
+  slots.forEach(([slot, i]) => {
     const k = e.eq[slot];
     if(!k) return;
-    const h = e.hands[i];
+    const raw = two
+      ? { x: (e.hands[0].x + e.hands[1].x) / 2, y: (e.hands[0].y + e.hands[1].y) / 2 }
+      : e.hands[i];
+    // push the anchor out until the sprite's grip end clears the body
+    const [hx, hy] = clearAnchor(raw.x, raw.y, e._lax, e._lay, k,
+                                 BODY_R + KEYLINE, e.face.x, e.face.y);
     ctx.save();
-    ctx.translate(h.x * TS - ox + TS/2, h.y * TS - oy + TS/2);
-    const side = i ? 1 : -1;
+    ctx.translate(hx * TS - ox + TS/2, hy * TS - oy + TS/2);
+    const side = two ? 0 : (i ? 1 : -1);
     const cant = GROUND[k].cant || 0;
     // rest angle, then the swing on top: the weapon moves, not the wearer
     ctx.rotate(base + side * (cant + sw * 1.0));
@@ -180,6 +191,18 @@ export function draw(now){
     ctx.shadowBlur = 0;
 
     if(f) drawWallFace(ctx, f - 1, sx, sy, col);
+    else if(fl && hasArt(fl) && v){
+      /* Dropped gear draws as its sprite, lying at an angle derived from the
+         tile index — deterministic, so it never flickers between frames, and
+         varied, so a floor of loot does not look like a rack. Only in direct
+         view: remembered tiles stay glyphs, since memory is not detail. */
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(((Math.imul(idx(x, y), 2654435761) >>> 0) % 3600) / 3600 * Math.PI * 2);
+      ctx.scale(0.82, 0.82);
+      drawGearArt(ctx, fl, TS, T.bg);
+      ctx.restore();
+    }
     else {
       ctx.fillStyle = col;
       ctx.fillText(wallT ? T.wallGlyph : (fl ? GROUND[fl].g : T.floorGlyph), sx, sy);
@@ -210,7 +233,9 @@ export function draw(now){
       if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = T.you }
       drawPlayer(ctx, e, sx - e.face.x * lean, sy - e.face.y * lean - bob, T, now, breath);
       // hands and what they carry last: they float in front of everything
-      drawHands(ctx, e, ox, oy, TS, T.you, dim, breath, T.bg, [e.eq.off, e.eq.main]);
+      const twoHanded = e.eq.main && GROUND[e.eq.main].twoHand;
+      drawHands(ctx, e, ox, oy, TS, T.you, dim, breath, T.bg,
+                twoHanded ? [1, 1] : [e.eq.off, e.eq.main]);
       drawHeld(ctx, e, ox, oy, TS, T, now);
     }
     else ctx.fillText(e.glyph, sx, sy);
