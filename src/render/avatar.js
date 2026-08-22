@@ -87,47 +87,73 @@ function cape(ctx, e, ax, ay, breath){
   const P = n => [n.x - ax, n.y - ay];
   const ribs = e.cape;
   const last = ribs.length - 1;
+  const tip = j => P(ribs[j][ribs[j].length - 1]);
 
-  // outline, drawn first and heavy: the reference's black keyline
+  /* The hem NOTCHES between pleats: each rib tip is a point, and the gap
+     between two tips cuts back toward the collar. A hem running straight from
+     tip to tip reads as a cut-out; the notches make it cloth gathered in folds.
+
+     The inset is a FIXED distance, not a fraction of the cape's length. Scaling
+     it turned every pleat into a spike — a long cape got a proportionally
+     enormous notch and the whole thing read as flames. */
+  const NOTCH = 0.11;
+  const notchAt = (a, b) => {
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    const d = Math.hypot(mx, my) || 1;
+    return [mx - mx / d * NOTCH, my - my / d * NOTCH];
+  };
+  const hem = () => {
+    for(let j = 1; j < ribs.length; j++){
+      const a = tip(j - 1), b = tip(j);
+      const n = notchAt(a, b);
+      ctx.lineTo(n[0], n[1]);
+      ctx.lineTo(b[0], b[1]);
+    }
+  };
+
   const shell = () => {
     ctx.beginPath();
     const a = P(ribs[0][0]);
     ctx.moveTo(a[0], a[1]);
     for(let i = 1; i < ribs[0].length; i++){ const p = P(ribs[0][i]); ctx.lineTo(p[0], p[1]) }
-    for(let j = 1; j < ribs.length; j++){
-      const t = P(ribs[j][ribs[j].length-1]);
-      ctx.lineTo(t[0], t[1]);
-    }
+    hem();
     for(let i = ribs[last].length - 2; i >= 0; i--){ const p = P(ribs[last][i]); ctx.lineTo(p[0], p[1]) }
     for(let j = last - 1; j >= 1; j--){ const p = P(ribs[j][0]); ctx.lineTo(p[0], p[1]) }
     ctx.closePath();
   };
 
   ctx.strokeStyle = AVATAR.K;
-  ctx.lineWidth = 0.085;
+  ctx.lineWidth = 0.10;
   shell(); ctx.stroke();
   ctx.fillStyle = AVATAR.R3;
   shell(); ctx.fill();
 
-  // pleats between adjacent ribs
+  /* Pleats. Four tones stepped hard rather than blended — at this pixel size a
+     gentle gradient quantizes to a single flat colour and the folds vanish. */
+  const TONE = [AVATAR.R2, AVATAR.R4, AVATAR.R1, AVATAR.R3];
   for(let j = 0; j < last; j++){
-    const A = ribs[j], B = ribs[j+1];
+    const A = ribs[j], B = ribs[j + 1];
     ctx.beginPath();
     const a0 = P(A[0]); ctx.moveTo(a0[0], a0[1]);
     for(let i = 1; i < A.length; i++){ const p = P(A[i]); ctx.lineTo(p[0], p[1]) }
+    const n = notchAt(tip(j), tip(j + 1));
+    ctx.lineTo(n[0], n[1]);                    // the same notch, so pleat meets hem
     for(let i = B.length - 1; i >= 0; i--){ const p = P(B[i]); ctx.lineTo(p[0], p[1]) }
     ctx.closePath();
-    ctx.fillStyle = j % 2 ? AVATAR.R2 : AVATAR.R3;
+    ctx.fillStyle = TONE[j % TONE.length];
     ctx.fill();
-    // a lit edge down one side of every other pleat
-    if(j % 2){
-      ctx.beginPath();
-      const s0 = P(A[1]); ctx.moveTo(s0[0], s0[1]);
-      for(let i = 2; i < A.length; i++){ const p = P(A[i]); ctx.lineTo(p[0], p[1]) }
-      ctx.strokeStyle = AVATAR.R4;
-      ctx.lineWidth = 0.035;
-      ctx.stroke();
-    }
+  }
+
+  /* Hard black creases between pleats. Without them the tones abut directly and
+     the cape reads as a colour ramp instead of separate folds. */
+  ctx.strokeStyle = AVATAR.K;
+  ctx.lineWidth = 0.045;
+  for(let j = 1; j < last; j++){
+    const rib = ribs[j];
+    ctx.beginPath();
+    const s0 = P(rib[0]); ctx.moveTo(s0[0], s0[1]);
+    for(let i = 1; i < rib.length; i++){ const p = P(rib[i]); ctx.lineTo(p[0], p[1]) }
+    ctx.stroke();
   }
 
   // collar: the band the cloth gathers into, behind the head
@@ -135,14 +161,14 @@ function cape(ctx, e, ax, ay, breath){
   ctx.beginPath();
   ctx.arc(-e.face.x * 0.06, -e.face.y * 0.06, cr, 0, Math.PI * 2);
   ctx.strokeStyle = AVATAR.K;
-  ctx.lineWidth = 0.085;
+  ctx.lineWidth = 0.09;
   ctx.stroke();
   ctx.fillStyle = AVATAR.R2;
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(-e.face.x * 0.06, -e.face.y * 0.06, cr - 0.06, 0, Math.PI * 2);
+  ctx.arc(-e.face.x * 0.06, -e.face.y * 0.06, cr - 0.07, 0, Math.PI * 2);
   ctx.strokeStyle = AVATAR.R1;
-  ctx.lineWidth = 0.04;
+  ctx.lineWidth = 0.05;
   ctx.stroke();
 }
 

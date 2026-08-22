@@ -19,19 +19,25 @@
    zoom and on every screen size, including the enlarged boss viewport. */
 
 export const RIBS     = 7;      // fan across the back; alternating lengths curl the hem
-export const RIB_N    = 5;      // nodes per rib, anchor included
-export const RIB_SEG  = 0.20;   // tile lengths between nodes
+export const RIB_N    = 6;      // nodes per rib, anchor included
+export const RIB_SEG  = 0.235;  // tile lengths between nodes
 export const SHOULDER = 0.36;   // anchor arc radius — pinned at the body's edge,
                                 // not inside it, or only the tips would show
-const SPREAD   = 1.62;          // half-angle of the shoulder arc — wide enough
-                                // that the cloth wraps past the body's sides
+/* The cape is a TRAPEZOID: gathered narrow at the collar, widening as it falls.
+   Starting the ribs wide and letting them splay gives a mantle that fans
+   sideways and opens gaps between pleats — it reads as separate tongues of
+   cloth rather than one garment. Narrow anchors plus a low SPILL (so ribs keep
+   their outward angle instead of being pulled parallel) is what makes it hang
+   and widen. */
+const SPREAD   = 0.95;          // half-angle of the shoulder arc
 const DAMP     = 0.90;          // velocity retained per frame
 const DRAG     = 0.15;          // pull toward the trailing rest pose
 const SWAY     = 0.12;          // ripple amplitude
-const CURL     = 0.13;          // alternating rib length — soft lobes, no corners
+const CURL     = 0.045;          // alternating rib length — soft lobes, no corners
 const WAVE     = 0.85;          // phase shift per node — makes the sway travel
 const MAX_BEND = 0.40;          // radians per joint
-const SPILL    = 0.55;          // how strongly outer ribs sweep back behind
+const SPILL    = 0.44;          // 1 = all ribs parallel, 0 = full fan.
+                                // Too low and the outer ribs flare into wings.
 
 const ribT = j => (RIBS === 1 ? 0 : (j / (RIBS - 1)) * 2 - 1);   // -1..1 across the fan
 
@@ -81,7 +87,7 @@ export function updateCape(e, ax, ay, now, dt){
        across, and alternate ribs run short. With a spline through the tips that
        alternation reads as soft curls — undulation without a single corner,
        which is what separates cloth from a bat wing. */
-    const seg = RIB_SEG * (1 - 0.13 * Math.abs(t)) * (1 + (j % 2 ? -CURL : CURL * 0.5));
+    const seg = RIB_SEG * (1 - 0.26 * Math.abs(t)) * (1 + (j % 2 ? -CURL : CURL * 0.5));
     const phase = now / 540 + j * 1.1 + (e.x * 0.7 + e.y * 1.3);
 
     rib[0].x = anx; rib[0].y = any;

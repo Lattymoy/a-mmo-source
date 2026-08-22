@@ -34,6 +34,39 @@ px/tile against the sword's 37.5, and the bow was redrawn larger rather than
 scaled. **Sprite size in the world is a consequence of pixel count, never of a
 scale factor.**
 
+### The cape is a trapezoid, not a mantle
+
+**Status:** `STATED` — iterated against Mac's reference.
+
+The first pixel cape fanned sideways: ribs anchored across a wide arc and
+splayed, which opened gaps between pleats so it read as separate tongues of
+cloth rather than one garment.
+
+A cape is **gathered narrow at the collar and widens as it falls**. That is a
+combination of two dials, not one:
+
+- `SPREAD` — how wide the ribs are pinned. Narrow.
+- `SPILL` — how strongly ribs are pulled parallel. Low enough that they fan
+  outward as they descend, high enough that the outer ones do not flare into
+  wings.
+
+Rib length tapers from the centre out, so the hem comes to a point rather than
+cutting straight across.
+
+### Pleats need hard steps and a notched hem
+
+Four tones stepped hard, not blended — at this pixel density a gentle gradient
+quantizes to one flat colour and the folds disappear entirely. Black creases run
+down every internal rib; without them the tones abut and the cape reads as a
+colour ramp instead of separate folds.
+
+The hem **notches** between pleats: each rib tip is a point and the gap cuts
+back toward the collar. A hem running tip to tip reads as a cut-out.
+
+**The notch is a fixed distance, not a fraction of length.** Scaling it meant a
+long cape got a proportionally enormous notch, every pleat became a spike, and
+the whole thing read as flames.
+
 ### The player's palette is fixed
 
 The avatar takes neither the theme nor the biome tint. It looks identical under
