@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>grid proto</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#05070A;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  body{display:flex;flex-direction:column;user-select:none;touch-action:manipulation}
+
+  #top{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;
+    font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#4A5A66;flex:0 0 auto}
+  #top .stat{color:#8A9AA6}
+  #top .stat b{color:#D8E4EC;font-weight:500}
+  #top .sp{flex:1}
+  .tog{border:1px solid #1C2830;background:transparent;color:#5C6E7A;
+    font:inherit;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    padding:5px 8px;border-radius:2px}
+  .tog:active{background:#111A20}
+
+  #wrap{flex:1;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%}
+
+  #log{position:absolute;left:12px;right:12px;bottom:8px;pointer-events:none;
+    font-size:10.5px;line-height:1.5;letter-spacing:.02em;color:#5E7080}
+  #log div:last-child{color:#A8BCC8}
+
+  #bar{flex:0 0 auto;display:flex;gap:6px;padding:8px 10px calc(env(safe-area-inset-bottom) + 10px)}
+  .ab{flex:1;height:58px;border:1px solid #17222A;background:#0A0E12;border-radius:3px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    color:#5C6E7A;font:inherit;position:relative;overflow:hidden}
+  .ab .g{font-size:19px;line-height:1;color:#8A9AA6}
+  .ab .n{font-size:8px;letter-spacing:.13em;text-transform:uppercase}
+  .ab.armed{border-color:#3E6E8C;background:#0E1A22}
+  .ab.armed .g,.ab.armed .n{color:#9CD8F4}
+  .ab.cool{opacity:.32}
+  .ab .cd{position:absolute;left:0;bottom:0;height:2px;background:#3E6E8C}
+  #dead{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(5,7,10,.86);color:#C4553A;font-size:12px;letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <span class="stat">HP <b id="hp">20</b></span>
+  <span class="stat">T <b id="clk">0</b></span>
+  <span class="stat" id="inv">— — —</span>
+  <span class="sp"></span>
+  <button class="tog" id="bTheme">phosphor</button>
+  <button class="tog" id="bCam">close</button>
+  <button class="tog" id="bNew">new</button>
+</div>
+
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="log"></div>
+  <div id="dead">dead — tap new</div>
+</div>
+
+<div id="bar"></div>
+
+<script>
+/* ───────────────────────── config ───────────────────────── */
+const W = 56, H = 56, FOV = 8;
+const STEP_MS = 68;          // scheduler pace — readability, not simulation speed
+const MOVE_MS = 100;         // glyph slide duration
+
+/* ───────────────────────── rng ───────────────────────── */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let rnd = mulberry32(Date.now()&0xffffffff);
+const ri=(n)=>Math.floor(rnd()*n);
+
+/* ───────────────────────── state ───────────────────────── */
+let wall, seen, vis, flora, ents, player, clock, waiting, dead;
+let path = [], armed = null, valid = null;
+let logs = [];
+
+const idx=(x,y)=>y*W+x;
+const inB=(x,y)=>x>=0&&y>=0&&x<W&&y<H;
+const isWall=(x,y)=>!inB(x,y)||wall[idx(x,y)]===1;
+const dist=(a,b,c,d)=>Math.max(Math.abs(a-c),Math.abs(b-d));
+
+/* ───────────────────────── map ───────────────────────── */
+function genMap(){
+  wall = new Uint8Array(W*H);
+  for(let i=0;i<W*H;i++) wall[i] = rnd()<0.45 ? 1 : 0;
+  for(let x=0;x<W;x++){wall[idx(x,0)]=1;wall[idx(x,H-1)]=1}
+  for(let y=0;y<H;y++){wall[idx(0,y)]=1;wall[idx(W-1,y)]=1}
+
+  for(let pass=0;pass<5;pass++){
+    const nx = wall.slice();
+    for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+      let n=0;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)
+        if(dx||dy) n += wall[idx(x+dx,y+dy)];
+      nx[idx(x,y)] = n>=5 ? 1 : (n<=2 ? 0 : wall[idx(x,y)]);
+    }
+    wall = nx;
+  }
+
+  // keep only the largest open region
+  const reg = new Int32Array(W*H).fill(-1);
+  let best=-1, bestN=0, id=0;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(wall[idx(x,y)]||reg[idx(x,y)]>=0) continue;
+    const q=[[x,y]]; reg[idx(x,y)]=id; let n=0;
+    while(q.length){
+      const [cx,cy]=q.pop(); n++;
+      for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const a=cx+dx,b=cy+dy;
+        if(inB(a,b)&&!wall[idx(a,b)]&&reg[idx(a,b)]<0){reg[idx(a,b)]=id;q.push([a,b])}
+      }
+    }
+    if(n>bestN){bestN=n;best=id}
+    id++;
+  }
+  for(let i=0;i<W*H;i++) if(!wall[i] && reg[i]!==best) wall[i]=1;
+
+  seen = new Uint8Array(W*H);
+  vis  = new Uint8Array(W*H);
+  return bestN;
+}
+
+function openTiles(){
+  const o=[];
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++) if(!wall[idx(x,y)]) o.push([x,y]);
+  return o;
+}
+
+/* ───────────────────────── flora ───────────────────────── */
+// flora as traits, not recipes — the crafting layer reads these, the glyph is just the label
+const FLORA = {
+  fiber:   {g:'"', name:'fiber',   traits:'fibrous'},
+  resin:   {g:'%', name:'resin',   traits:'resinous'},
+  crystal: {g:'*', name:'crystal', traits:'brittle'},
+};
+function scatterFlora(open){
+  flora = new Map();
+  const keys = Object.keys(FLORA);
+  const n = Math.floor(open.length*0.035);
+  for(let i=0;i<n;i++){
+    const [x,y] = open[ri(open.length)];
+    flora.set(idx(x,y), keys[ri(keys.length)]);
+  }
+}
+
+/* ───────────────────────── entities ───────────────────────── */
+const KINDS = {
+  k: {name:'kobold', hp:6,  spd:90,  dmg:[1,3], sight:9},
+  r: {name:'rat',    hp:3,  spd:70,  dmg:[1,2], sight:7},
+  T: {name:'troll',  hp:16, spd:160, dmg:[4,7], sight:8},
+};
+function spawn(open){
+  ents = [];
+  const [px,py] = open[ri(open.length)];
+  player = {x:px,y:py,glyph:'@',hp:20,max:20,spd:100,next:0,you:true,
+            ax:px,ay:py,at:-9999, inv:{fiber:0,resin:0,crystal:0}};
+  ents.push(player);
+
+  const pool = ['r','r','r','k','k','T'];
+  const n = 16;
+  let tries = 0;
+  while(ents.length < n+1 && tries++ < 4000){
+    const [x,y] = open[ri(open.length)];
+    if(dist(x,y,px,py) < 12) continue;
+    if(ents.some(e=>e.x===x&&e.y===y)) continue;
+    const k = pool[ri(pool.length)], K = KINDS[k];
+    ents.push({x,y,glyph:k,kind:k,hp:K.hp,max:K.hp,spd:K.spd,next:0,
+               ax:x,ay:y,at:-9999});
+  }
+}
+const entAt=(x,y)=>ents.find(e=>e.hp>0&&e.x===x&&e.y===y);
+
+/* ───────────────────────── fov / los ───────────────────────── */
+function los(x0,y0,x1,y1){
+  let dx=Math.abs(x1-x0), dy=Math.abs(y1-y0);
+  let sx=x0<x1?1:-1, sy=y0<y1?1:-1, err=dx-dy, x=x0, y=y0;
+  while(x!==x1||y!==y1){
+    const e2=2*err;
+    if(e2>-dy){err-=dy;x+=sx}
+    if(e2<dx){err+=dx;y+=sy}
+    if(x===x1&&y===y1) return true;
+    if(isWall(x,y)) return false;
+  }
+  return true;
+}
+function computeFOV(){
+  vis.fill(0);
+  for(let y=player.y-FOV;y<=player.y+FOV;y++)
+    for(let x=player.x-FOV;x<=player.x+FOV;x++){
+      if(!inB(x,y)) continue;
+      if(dist(x,y,player.x,player.y)>FOV) continue;
+      if(los(player.x,player.y,x,y)){ vis[idx(x,y)]=1; seen[idx(x,y)]=1 }
+    }
+}
+
+/* ───────────────────────── pathing ───────────────────────── */
+function pathTo(tx,ty){
+  if(isWall(tx,ty)) return [];
+  const prev = new Int32Array(W*H).fill(-1);
+  const q = [idx(player.x,player.y)];
+  prev[q[0]] = q[0];
+  const goal = idx(tx,ty);
+  for(let h=0; h<q.length; h++){
+    const cur = q[h];
+    if(cur===goal) break;
+    const cx = cur%W, cy = (cur/W)|0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      if(!dx&&!dy) continue;
+      const a=cx+dx,b=cy+dy;
+      if(!inB(a,b)||wall[idx(a,b)]||prev[idx(a,b)]>=0) continue;
+      const e = entAt(a,b);
+      if(e && idx(a,b)!==goal) continue;      // route around bodies, not through
+      prev[idx(a,b)] = cur;
+      q.push(idx(a,b));
+    }
+  }
+  if(prev[goal]<0) return [];
+  const out=[]; let c=goal;
+  while(c!==idx(player.x,player.y)){ out.unshift([c%W,(c/W)|0]); c=prev[c] }
+  return out;
+}
+
+/* ───────────────────────── abilities ───────────────────────── */
+// arming makes the next tap modal — so arming must *show* its own legal set
+const ABIL = [
+  {id:'dash',   g:'»', name:'dash',   cost:60,  cd:280,
+   tiles(){ const t=[];
+     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+       for(let n=1;n<=3;n++){
+         const x=player.x+dx*n, y=player.y+dy*n;
+         if(isWall(x,y)||entAt(x,y)) break;
+         t.push([x,y]);
+       }} return t },
+   fire(x,y){ const d=Math.max(Math.abs(x-player.x),Math.abs(y-player.y));
+     stepTo(x,y); say(`dash ${d}`); return true }},
+
+  {id:'cleave', g:'✳', name:'cleave', cost:150, cd:420,
+   tiles(){ const t=[];
+     for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+       if(!dx&&!dy) continue;
+       const x=player.x+dx,y=player.y+dy;
+       if(inB(x,y)&&!isWall(x,y)) t.push([x,y]);
+     } return t },
+   fire(x,y){
+     const dx=Math.sign(x-player.x), dy=Math.sign(y-player.y);
+     const arc = dx&&dy ? [[dx,dy],[dx,0],[0,dy]]
+                        : dx ? [[dx,-1],[dx,0],[dx,1]] : [[-1,dy],[0,dy],[1,dy]];
+     let hit=0;
+     for(const [ax,ay] of arc){
+       const e = entAt(player.x+ax, player.y+ay);
+       if(e && !e.you){ damage(e, 2+ri(3)); hit++ }
+     }
+     say(hit ? `cleave — ${hit} hit` : 'cleave — nothing');
+     return true }},
+
+  {id:'hurl',   g:'↗', name:'hurl',   cost:100, cd:240,
+   tiles(){ const t=[];
+     for(let y=player.y-5;y<=player.y+5;y++)for(let x=player.x-5;x<=player.x+5;x++){
+       if(!inB(x,y)||isWall(x,y)) continue;
+       if(dist(x,y,player.x,player.y)>5||dist(x,y,player.x,player.y)===0) continue;
+       if(!vis[idx(x,y)]) continue;
+       t.push([x,y]);
+     } return t },
+   fire(x,y){ const e=entAt(x,y);
+     if(e&&!e.you){ damage(e, 2+ri(4)); say(`hurl — ${KINDS[e.kind].name}`) }
+     else say('hurl — miss');
+     return true }},
+
+  {id:'gather', g:'⌂', name:'gather', cost:80,  cd:0,
+   tiles(){ const t=[];
+     for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+       const x=player.x+dx,y=player.y+dy;
+       if(inB(x,y)&&flora.has(idx(x,y))) t.push([x,y]);
+     } return t },
+   fire(x,y){ const k=flora.get(idx(x,y));
+     if(!k) return false;
+     flora.delete(idx(x,y)); player.inv[k]++;
+     say(`gathered ${FLORA[k].name} — ${FLORA[k].traits}`);
+     return true }},
+];
+const cooldown = {};
+
+/* ───────────────────────── actions ───────────────────────── */
+let queued = null;   // {type:'ability'|'attack', ...}
+
+function stepTo(x,y){
+  player.ax=player.x; player.ay=player.y; player.at=performance.now();
+  player.x=x; player.y=y;
+}
+function damage(e,n){
+  e.hp -= n;
+  if(e.hp<=0){
+    if(e.you){ dead=true; document.getElementById('dead').style.display='flex'; say('you died') }
+    else say(`${KINDS[e.kind].name} dies`);
+  }
+}
+function say(s){ logs.push(s); if(logs.length>3) logs.shift(); drawLog() }
+
+// returns cost in ticks, or 0 if the player still needs input
+function playerAct(){
+  if(queued){
+    const q = queued; queued = null;
+    if(q.type==='attack'){
+      const e = entAt(q.x,q.y);
+      if(e && !e.you && dist(e.x,e.y,player.x,player.y)<=1){
+        damage(e, 3+ri(3)); say(`hit ${KINDS[e.kind].name}`);
+        return 120;
+      }
+      return 0;
+    }
+    if(q.type==='ability'){
+      const A = ABIL.find(a=>a.id===q.id);
+      if(A.fire(q.x,q.y)){ cooldown[A.id] = clock + A.cd; return A.cost }
+      return 0;
+    }
+  }
+  if(path.length){
+    const [x,y] = path[0];
+    const e = entAt(x,y);
+    if(e && !e.you){
+      path = [];
+      damage(e, 3+ri(3)); say(`hit ${KINDS[e.kind].name}`);
+      return 120;
+    }
+    path.shift();
+    stepTo(x,y);
+    return 100;
+  }
+  return 0;
+}
+
+function monsterAct(m){
+  const K = KINDS[m.kind];
+  const d = dist(m.x,m.y,player.x,player.y);
+  const sees = d<=K.sight && los(m.x,m.y,player.x,player.y);
+  if(sees && d<=1){
+    damage(player, K.dmg[0]+ri(K.dmg[1]-K.dmg[0]+1));
+    say(`${K.name} hits you`);
+    return K.spd;
+  }
+  if(sees){
+    let bx=0,by=0,bd=d;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      if(!dx&&!dy) continue;
+      const x=m.x+dx,y=m.y+dy;
+      if(isWall(x,y)||entAt(x,y)) continue;
+      const nd = dist(x,y,player.x,player.y);
+      if(nd<bd){bd=nd;bx=dx;by=dy}
+    }
+    if(bx||by){ m.ax=m.x;m.ay=m.y;m.at=performance.now(); m.x+=bx;m.y+=by }
+    return K.spd;
+  }
+  if(rnd()<0.35){
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    const [dx,dy]=dirs[ri(4)];
+    const x=m.x+dx,y=m.y+dy;
+    if(!isWall(x,y)&&!entAt(x,y)){ m.ax=m.x;m.ay=m.y;m.at=performance.now(); m.x=x;m.y=y }
+  }
+  return K.spd;
+}
+
+/* ───────────────────────── scheduler ─────────────────────────
+   Time only moves when someone acts, but nobody can stall it:
+   an actor with nothing to do is skipped, not waited on.        */
+function tick(){
+  if(dead) return;
+  let a=null;
+  for(const e of ents) if(e.hp>0 && (!a || e.next<a.next)) a=e;
+  if(!a) return;
+  clock = Math.max(clock, a.next);
+
+  if(a.you){
+    const cost = playerAct();
+    if(cost===0){ waiting = true; return }
+    a.next = clock + cost;
+    computeFOV();
+    if(armed) valid = validSet(armed);
+  } else {
+    a.next = clock + monsterAct(a);
+  }
+  waiting = false;
+  ents = ents.filter(e=>e.hp>0||e.you);
+  hud();
+}
+
+/* ───────────────────────── input ───────────────────────── */
+function validSet(id){
+  const A = ABIL.find(a=>a.id===id);
+  const s = new Set();
+  for(const [x,y] of A.tiles()) s.add(idx(x,y));
+  return s;
+}
+function arm(id){
+  if(dead) return;
+  if(armed===id){ armed=null; valid=null; bar(); return }
+  if((cooldown[id]||0) > clock) return;
+  armed = id; valid = validSet(id); bar();
+}
+function tapTile(x,y){
+  if(dead||!inB(x,y)) return;
+  if(armed){
+    if(valid.has(idx(x,y))){
+      queued = {type:'ability', id:armed, x, y};
+      path = []; armed = null; valid = null; bar(); waiting = false;
+    } else {
+      armed = null; valid = null; bar();   // tap outside the lit set disarms, never misfires
+    }
+    return;
+  }
+  const e = entAt(x,y);
+  if(e && !e.you && dist(x,y,player.x,player.y)<=1){
+    queued = {type:'attack', x, y}; path = []; waiting = false; return;
+  }
+  if(e && !e.you){
+    // walk to a tile adjacent to it, then the next tap swings
+    let best=null,bd=1e9;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const a=x+dx,b=y+dy;
+      if(isWall(a,b)||entAt(a,b)) continue;
+      const p = pathTo(a,b);
+      if(p.length && p.length<bd){bd=p.length;best=p}
+    }
+    if(best){ path=best; waiting=false }
+    return;
+  }
+  const p = pathTo(x,y);
+  if(p.length){ path = p; waiting = false }   // any new tap replaces the old route
+}
+
+/* ───────────────────────── themes ─────────────────────────
+   Same simulation, three readings of it. */
+const THEMES = {
+  phosphor:{
+    bg:'#05070A', floorGlyph:'·', wallGlyph:'#',
+    floor:'#16342A', wall:'#2C6048', mem:'#0E2019',
+    you:'#9DFFD0', mon:'#FF9B7A', flora:'#7FE8A8', cell:null,
+    glow:8, lit:'#63C4E8', grid:false
+  },
+  bone:{
+    bg:'#0B0A0C', floorGlyph:'.', wallGlyph:'#',
+    floor:'#332C38', wall:'#6E6070', mem:'#1D1920',
+    you:'#F0E6D4', mon:'#C4553A', flora:'#8CA85E', cell:null,
+    glow:0, lit:'#D8A24C', grid:false
+  },
+  board:{
+    bg:'#080B0F', floorGlyph:'·', wallGlyph:'▓',
+    floor:'#4A5C6A', wall:'#7E93A4', mem:'#222A33', cell:'#141B22',
+    you:'#EAF4FF', mon:'#E86A5A', flora:'#6FBF8E',
+    glow:0, lit:'#4E9AC4', grid:true
+  },
+};
+let theme = 'phosphor', cam = 'close';
+const COLS = {close:11, tactical:25};
+
+/* ───────────────────────── render ───────────────────────── */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let TS=24, cols=11, rows=14, ox=0, oy=0, dpr=1;
+
+function resize(){
+  dpr = Math.min(devicePixelRatio||1, 2);
+  const r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width*dpr; cv.height = r.height*dpr;
+  cv.style.width = r.width+'px'; cv.style.height = r.height+'px';
+  cols = COLS[cam];
+  TS = Math.floor(r.width/cols);
+  rows = Math.floor(r.height/TS);
+}
+
+function pos(e,now){
+  const t = Math.min(1,(now-e.at)/MOVE_MS);
+  if(t>=1) return [e.x,e.y];
+  const k = t*t*(3-2*t);
+  return [e.ax+(e.x-e.ax)*k, e.ay+(e.y-e.ay)*k];
+}
+
+function draw(now){
+  const T = THEMES[theme];
+  ctx.save(); ctx.scale(dpr,dpr);
+  const w = cv.width/dpr, h = cv.height/dpr;
+  ctx.fillStyle = T.bg; ctx.fillRect(0,0,w,h);
+
+  const [ppx,ppy] = pos(player,now);
+  ox = Math.round((ppx - (cols-1)/2)*TS - (w-cols*TS)/2);
+  oy = Math.round((ppy - (rows-1)/2)*TS - (h-rows*TS)/2);
+
+  ctx.font = `${Math.floor(TS*0.78)}px ui-monospace, Menlo, Consolas, monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+
+  const x0 = Math.floor(ox/TS)-1, y0 = Math.floor(oy/TS)-1;
+  const dim = armed ? 0.18 : 1;                      // the arm-state hush
+  const pulse = 0.55 + 0.45*Math.sin(now/260);
+
+  for(let y=y0;y<y0+rows+3;y++)for(let x=x0;x<x0+cols+3;x++){
+    if(!inB(x,y)||!seen[idx(x,y)]) continue;
+    const sx = x*TS-ox+TS/2, sy = y*TS-oy+TS/2;
+    const v = vis[idx(x,y)];
+    const isValid = valid && valid.has(idx(x,y));
+
+    if(T.cell){
+      ctx.globalAlpha = v ? (isValid?1:dim) : 0.5*dim;
+      ctx.fillStyle = T.cell;
+      ctx.fillRect(x*TS-ox+(T.grid?1:0), y*TS-oy+(T.grid?1:0), TS-(T.grid?2:0), TS-(T.grid?2:0));
+    }
+    if(isValid){
+      ctx.globalAlpha = 0.20*pulse;
+      ctx.fillStyle = T.lit;
+      ctx.fillRect(x*TS-ox+1, y*TS-oy+1, TS-2, TS-2);
+    }
+
+    ctx.globalAlpha = v ? (isValid?1:dim) : 0.55*dim;
+    const wallT = wall[idx(x,y)]===1;
+    const fl = flora.get(idx(x,y));
+    let g = wallT ? T.wallGlyph : (fl ? FLORA[fl].g : T.floorGlyph);
+    let col = !v ? T.mem : (wallT ? T.wall : (fl ? T.flora : T.floor));
+    if(isValid && !wallT) col = T.lit;
+    ctx.fillStyle = col;
+    ctx.shadowBlur = 0;
+    ctx.fillText(g, sx, sy);
+  }
+
+  for(const e of ents){
+    if(e.hp<=0) continue;
+    if(!vis[idx(e.x,e.y)]) continue;
+    const [ex,ey] = pos(e,now);
+    const sx = ex*TS-ox+TS/2, sy = ey*TS-oy+TS/2;
+    ctx.globalAlpha = e.you ? 1 : dim;
+    ctx.fillStyle = e.you ? T.you : T.mon;
+    if(T.glow){ ctx.shadowBlur = T.glow; ctx.shadowColor = ctx.fillStyle }
+    ctx.fillText(e.glyph, sx, sy);
+    ctx.shadowBlur = 0;
+
+    if(!e.you && e.hp < e.max){
+      ctx.globalAlpha = dim*0.8;
+      ctx.fillStyle = T.mon;
+      const bw = (TS-6)*(e.hp/e.max);
+      ctx.fillRect(ex*TS-ox+3, ey*TS-oy+TS-3, bw, 1.5);
+    }
+  }
+
+  if(path.length && !armed){
+    ctx.globalAlpha = 0.30;
+    ctx.fillStyle = T.lit;
+    for(const [x,y] of path) ctx.fillRect(x*TS-ox+TS/2-1.5, y*TS-oy+TS/2-1.5, 3, 3);
+  }
+
+  ctx.globalAlpha = 1;
+  if(cam==='tactical'){
+    ctx.fillStyle = 'rgba(5,7,10,.45)'; ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = '#5C6E7A'; ctx.font = '10px ui-monospace, monospace';
+    ctx.fillText('TACTICAL — TAP TO RETURN', w/2, h-16);
+  }
+  ctx.restore();
+}
+
+/* ───────────────────────── hud ───────────────────────── */
+const barEl = document.getElementById('bar');
+function bar(){
+  barEl.innerHTML = '';
+  for(const A of ABIL){
+    const cool = (cooldown[A.id]||0) > clock;
+    const b = document.createElement('button');
+    b.className = 'ab' + (armed===A.id?' armed':'') + (cool?' cool':'');
+    b.innerHTML = `<span class="g">${A.g}</span><span class="n">${A.name}</span>`;
+    if(cool){
+      const left = (cooldown[A.id]-clock)/A.cd;
+      const d = document.createElement('div'); d.className='cd';
+      d.style.width = (100*(1-left))+'%'; b.appendChild(d);
+    }
+    b.onclick = ()=>arm(A.id);
+    barEl.appendChild(b);
+  }
+}
+function hud(){
+  document.getElementById('hp').textContent = Math.max(0,player.hp);
+  document.getElementById('clk').textContent = Math.floor(clock/100);
+  const i = player.inv;
+  document.getElementById('inv').textContent = `" ${i.fiber}  % ${i.resin}  * ${i.crystal}`;
+  bar();
+}
+function drawLog(){
+  document.getElementById('log').innerHTML = logs.map(l=>`<div>${l}</div>`).join('');
+}
+
+/* ───────────────────────── loop ───────────────────────── */
+let last = 0;
+function frame(now){
+  if(!waiting && now-last > STEP_MS){ tick(); last = now }
+  draw(now);
+  requestAnimationFrame(frame);
+}
+
+/* ───────────────────────── boot ───────────────────────── */
+function restart(){
+  rnd = mulberry32((Math.random()*1e9)|0);
+  const n = genMap();
+  const open = openTiles();
+  scatterFlora(open);
+  spawn(open);
+  clock=0; waiting=false; dead=false; path=[]; armed=null; valid=null; queued=null; logs=[];
+  for(const k in cooldown) delete cooldown[k];
+  document.getElementById('dead').style.display='none';
+  computeFOV(); hud(); say(`${n} open tiles — ${ents.length-1} hostiles`);
+  resize();
+}
+
+cv.addEventListener('pointerdown', ev=>{
+  const r = cv.getBoundingClientRect();
+  if(cam==='tactical'){ cam='close'; document.getElementById('bCam').textContent='close'; resize(); return }
+  const x = Math.floor((ev.clientX - r.left + ox)/TS);
+  const y = Math.floor((ev.clientY - r.top  + oy)/TS);
+  tapTile(x,y);
+});
+
+document.getElementById('bTheme').onclick = e=>{
+  const k = Object.keys(THEMES);
+  theme = k[(k.indexOf(theme)+1)%k.length];
+  e.target.textContent = theme;
+};
+document.getElementById('bCam').onclick = e=>{
+  cam = cam==='close' ? 'tactical' : 'close';
+  e.target.textContent = cam;
+  resize();
+};
+document.getElementById('bNew').onclick = restart;
+addEventListener('resize', resize);
+
+restart();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
