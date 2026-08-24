@@ -393,4 +393,47 @@ group('avatar');
         Object.values(AVATAR).every(v => /^#[0-9A-Fa-f]{6}$/.test(v)));
 }
 
+/*  the rounded world  */
+/* Raum's horizon fold on a grid. The pair project()/unproject() replace a
+   mapping that was written out in six places in draw.js while its inverse
+   lived alone in camera.js — whose own comment says input and rendering
+   "can never disagree about where a tile is". This drives one through the
+   other on every visible cell, at every fold strength, because that is the
+   only way to know they still agree. Reading them cannot tell you: the
+   first version returned the centre cell UNFLOORED and it took a
+   round-trip to notice. */
+{
+  const { project, unproject, FOLD } = await import('../src/render/rounded.js');
+  const TS = 24, ox = 100, oy = 140, cx = 8.5, cy = 10.5;
+  const flat = FOLD.coef;
+  group('rounded world');
+  for (const coef of [0, 0.004, 0.012, 0.03, 0.06]) {
+    FOLD.coef = coef;
+    const rMax = coef > 0 ? 1 / Math.sqrt(coef) : Infinity;
+    let seen = 0, bad = 0;
+    for (let y = cy - 14; y <= cy + 14; y++) {
+      for (let x = cx - 14; x <= cx + 14; x++) {
+        // Past the turning radius two radii share a screen point and the
+        // far one is genuinely hidden — that is the fold BEING a horizon,
+        // not a rounding error. The renderer must not draw those either.
+        if (Math.hypot(x - cx, y - cy) >= rMax) continue;
+        const [sx, sy] = project(x, y, cx, cy, TS, ox, oy);
+        const back = unproject(sx, sy, cx, cy, TS, ox, oy);
+        seen++;
+        if (!back || back[0] !== Math.floor(x) || back[1] !== Math.floor(y)) bad++;
+      }
+    }
+    check(`fold ${coef}: ${seen} visible cells round-trip exactly`, bad === 0 && seen > 40);
+  }
+  // coef 0 must be the untouched flat grid, so the fold can ship dark.
+  FOLD.coef = 0;
+  const [fx, fy] = project(3, 4, 0, 0, TS, ox, oy);
+  check('a fold of 0 is the plain grid mapping', fx === 3 * TS - ox && fy === 4 * TS - oy);
+  // A tap past the horizon is sky. Inventing a tile for it is how input and
+  // rendering start to disagree.
+  FOLD.coef = 0.03;
+  check('a tap past the horizon returns no tile', unproject(9999, 9999, cx, cy, TS, ox, oy) === null);
+  FOLD.coef = flat;
+}
+
 report();
