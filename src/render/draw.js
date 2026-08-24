@@ -3,7 +3,7 @@ import { idx, inB } from '../core/grid.js';
 import { S } from '../core/state.js';
 import { GROUND } from '../world/ground.js';
 import { palette } from './themes.js';
-import { project, foldScaleAt, foldRadius, fillCell, FOLD } from './rounded.js';
+import { project, foldScaleAt, foldRadius, fillCell, standOn, FOLD } from './rounded.js';
 import { view, canvas, context } from './camera.js';
 globalThis.__fold = (c) => { FOLD.coef = c; };   // dev: dial the rounded world live
 import { updateFacing, updateHands, breathT, gaitT } from './character.js';
@@ -232,7 +232,12 @@ export function draw(now){
   for(const e of S.ents){
     if(e.hp <= 0 || !S.vis[idx(e.x, e.y)]) continue;
     const [ex, ey] = pos(e, now);
-    const sx = ex*TS - ox + TS/2, sy = ey*TS - oy + TS/2;
+    // Folded centre AND local shrink: a glyph that stays full size on a
+    // tile shrunk to a third reads as hovering rather than standing.
+    // The player is exempt by construction — they ARE the fold centre, so
+    // the projection is the identity there and the avatar's own mapping
+    // stays correct.
+    const [sx, sy, fsc] = standOn(ex, ey, ppx + 0.5, ppy + 0.5, TS, ox, oy);
 
     ctx.globalAlpha = e.you ? 1 : dim;
     ctx.fillStyle = e.you ? T.you : T.mon;
@@ -253,13 +258,18 @@ export function draw(now){
       drawHeld(ctx, e, ox, oy, TS, T, now);
       drawLevel(ctx, e, sx - e.face.x * lean, sy - e.face.y * lean - bob, breath);
     }
-    else ctx.fillText(e.glyph, sx, sy);
+    else {
+      ctx.font = `${Math.max(6, Math.floor(TS * 0.78 * fsc))}px ${MONO}`;
+      ctx.fillText(e.glyph, sx, sy);
+      ctx.font = `${Math.floor(TS * 0.78)}px ${MONO}`;   // restore the loop's size
+    }
     ctx.shadowBlur = 0;
 
     if(!e.you && e.hp < e.max){
       ctx.globalAlpha = dim * 0.8;
       ctx.fillStyle = T.mon;
-      ctx.fillRect(ex*TS - ox + 3, ey*TS - oy + TS - 3, (TS - 6) * (e.hp / e.max), 1.5);
+      const bw = (TS - 6) * fsc;
+      ctx.fillRect(sx - bw/2, sy + (TS/2 - 3) * fsc, bw * (e.hp / e.max), Math.max(1, 1.5 * fsc));
     }
   }
 
@@ -269,7 +279,7 @@ export function draw(now){
     const u = (now - f.t0) / f.dur;
     if(f.type === 'slash'){
       if(!S.vis[idx(f.x, f.y)]) continue;
-      const cx = f.x*TS - ox + TS/2, cy = f.y*TS - oy + TS/2;
+      const [cx, cy] = standOn(f.x, f.y, ppx + 0.5, ppy + 0.5, TS, ox, oy);
       ctx.globalAlpha = Math.sin((1 - u) * Math.PI/2) * dim;
       ctx.strokeStyle = T.gear;
       ctx.lineWidth = Math.max(1.5, TS * 0.09);
@@ -285,7 +295,9 @@ export function draw(now){
       ctx.globalAlpha = dim;
       ctx.fillStyle = T.gear;
       ctx.save();
-      ctx.translate(px*TS - ox + TS/2, py*TS - oy + TS/2);
+      const [gx, gy, gsc] = standOn(px, py, ppx + 0.5, ppy + 0.5, TS, ox, oy);
+      ctx.translate(gx, gy);
+      ctx.scale(gsc || 1, gsc || 1);   // an item on a distant tile is a distant item
       ctx.rotate(Math.atan2(f.y1 - f.y0, f.x1 - f.x0));
       ctx.fillText(f.g, 0, 0);
       ctx.restore();
@@ -298,7 +310,9 @@ export function draw(now){
     ctx.globalAlpha = 0.30;
     ctx.fillStyle = T.lit;
     for(const [x,y] of S.path)
-      ctx.fillRect(x*TS - ox + TS/2 - 1.5, y*TS - oy + TS/2 - 1.5, 3, 3);
+      { const [dx2, dy2, dsc] = standOn(x, y, ppx + 0.5, ppy + 0.5, TS, ox, oy);
+        const r = Math.max(1, 3 * dsc);
+        ctx.fillRect(dx2 - r/2, dy2 - r/2, r, r); }
   }
 
   ctx.globalAlpha = 1;

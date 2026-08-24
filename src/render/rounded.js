@@ -179,3 +179,21 @@ export function fillCell(ctx, x, y, cx, cy, TS, ox, oy, inset = 0) {
   ctx.closePath();
   ctx.fill();
 }
+
+/**
+ * The common case: a thing standing ON a cell.
+ *
+ * Returns [screenX, screenY, scale] — the folded centre and the local
+ * shrink in one call, because everything drawn at a cell needs both. A
+ * monster whose glyph stays full size on a tile that has shrunk to a
+ * third reads as floating above the ground rather than standing on it,
+ * which is the same error the walls had before their edges were
+ * projected: position folded, size not.
+ *
+ * `x, y` are cell coordinates; the +0.5 to reach the centre is applied
+ * here so no caller has to remember it.
+ */
+export function standOn(x, y, cx, cy, TS, ox, oy) {
+  const [sx, sy] = project(x + 0.5, y + 0.5, cx, cy, TS, ox, oy);
+  return [sx, sy, foldScaleAt(x + 0.5, y + 0.5, cx, cy)];
+}
