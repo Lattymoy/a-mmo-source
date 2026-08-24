@@ -3,7 +3,9 @@ import { idx, inB } from '../core/grid.js';
 import { S } from '../core/state.js';
 import { GROUND } from '../world/ground.js';
 import { palette } from './themes.js';
+import { project, foldScaleAt, foldRadius, fillCell, FOLD } from './rounded.js';
 import { view, canvas, context } from './camera.js';
+globalThis.__fold = (c) => { FOLD.coef = c; };   // dev: dial the rounded world live
 import { updateFacing, updateHands, breathT, gaitT } from './character.js';
 import { drawAvatar } from './avatar.js';
 import { drawGearArt, hasArt, clearAnchor } from './gear.js';
@@ -32,21 +34,36 @@ export function swingT(e, now){
   return Math.sin(u * Math.PI);
 }
 
-function drawWallFace(ctx, mask, sx, sy, col){
-  const h = view.TS / 2;
+/* A wall face, folded.
+   It strokes from the cell's centre out to each edge midpoint. Flat, those
+   are the centre offset by half a tile; on the rounded world they are not —
+   the fold moves the four edges by different amounts, so offsetting by a
+   constant `h` would leave straight wall segments floating over curved
+   ground, which is exactly how it looked before this.
+   So the edges are PROJECTED like everything else, and the stroke thins
+   with the local shrink so a distant wall does not stay a full-weight line
+   on a tile that is nearly gone. */
+function drawWallFace(ctx, mask, sx, sy, col, x, y, cx, cy, TS, ox, oy){
+  const fs = foldScaleAt(x + 0.5, y + 0.5, cx, cy);
   if(!mask){                                   // isolated pillar
+    const p = TS * 0.32 * (fs || 1);
     ctx.fillStyle = col;
-    ctx.fillRect(sx - view.TS*0.16, sy - view.TS*0.16, view.TS*0.32, view.TS*0.32);
+    ctx.fillRect(sx - p/2, sy - p/2, p, p);
     return;
   }
+  // The four edge midpoints, in cell space, through the same projection.
+  const N = project(x + 0.5, y,       cx, cy, TS, ox, oy);
+  const E = project(x + 1,   y + 0.5, cx, cy, TS, ox, oy);
+  const Sd= project(x + 0.5, y + 1,   cx, cy, TS, ox, oy);
+  const W = project(x,       y + 0.5, cx, cy, TS, ox, oy);
   ctx.strokeStyle = col;
-  ctx.lineWidth = Math.max(1.5, view.TS * 0.11);
+  ctx.lineWidth = Math.max(1, TS * 0.11 * (fs || 1));
   ctx.lineCap = 'round';
   ctx.beginPath();
-  if(mask & 1){ ctx.moveTo(sx,sy); ctx.lineTo(sx, sy - h) }
-  if(mask & 2){ ctx.moveTo(sx,sy); ctx.lineTo(sx + h, sy) }
-  if(mask & 4){ ctx.moveTo(sx,sy); ctx.lineTo(sx, sy + h) }
-  if(mask & 8){ ctx.moveTo(sx,sy); ctx.lineTo(sx - h, sy) }
+  if(mask & 1){ ctx.moveTo(sx,sy); ctx.lineTo(N[0], N[1]) }
+  if(mask & 2){ ctx.moveTo(sx,sy); ctx.lineTo(E[0], E[1]) }
+  if(mask & 4){ ctx.moveTo(sx,sy); ctx.lineTo(Sd[0], Sd[1]) }
+  if(mask & 8){ ctx.moveTo(sx,sy); ctx.lineTo(W[0], W[1]) }
   ctx.stroke();
 }
 
@@ -139,6 +156,7 @@ export function draw(now){
   const [ppx, ppy] = pos(S.player, now);
   view.ox = Math.round((ppx - (cols-1)/2) * TS - (w - cols*TS)/2);
   view.oy = Math.round((ppy - (rows-1)/2) * TS - (h - rows*TS)/2);
+  view.px = ppx; view.py = ppy;   // the fold centre, so tileAt inverts from the same origin
   const { ox, oy } = view;
 
   ctx.font = `${Math.floor(TS * 0.78)}px ${MONO}`;
@@ -150,9 +168,19 @@ export function draw(now){
   const pulse = 0.55 + 0.45 * Math.sin(now / 260);
 
   // ── terrain
+  // THE ROUNDED WORLD: every centre goes through project() and every tile
+  // shrinks by foldScaleAt(), because moving centres alone would leave
+  // tiles overlapping as the spacing closes. Past foldRadius() the ground
+  // has curled away — the fold's own answer to draw distance, which is why
+  // the loop skips those instead of drawing ever-smaller slivers. At
+  // FOLD.coef = 0 project() is the identity and the scale is 1, so this is
+  // the flat grid exactly as it was.
+  const fr = foldRadius();
   for(let y = y0; y < y0 + rows + 3; y++) for(let x = x0; x < x0 + cols + 3; x++){
     if(!inB(x,y) || !S.seen[idx(x,y)]) continue;
-    const sx = x*TS - ox + TS/2, sy = y*TS - oy + TS/2;
+    if(Math.hypot(x - ppx, y - ppy) >= fr) continue;                    // over the horizon
+    const [sx, sy] = project(x + 0.5, y + 0.5, ppx + 0.5, ppy + 0.5, TS, ox, oy);
+    const TSf = TS * foldScaleAt(x + 0.5, y + 0.5, ppx + 0.5, ppy + 0.5);
     const v = S.vis[idx(x,y)];
     const isValid = S.valid && S.valid.has(idx(x,y));
 
@@ -160,12 +188,12 @@ export function draw(now){
       ctx.globalAlpha = v ? (isValid ? 1 : dim) : 0.5 * dim;
       ctx.fillStyle = T.cell;
       const g = T.grid ? 1 : 0;
-      ctx.fillRect(x*TS - ox + g, y*TS - oy + g, TS - g*2, TS - g*2);
+      fillCell(ctx, x, y, ppx + 0.5, ppy + 0.5, TS, ox, oy, g);
     }
     if(isValid){
       ctx.globalAlpha = 0.20 * pulse;
       ctx.fillStyle = T.lit;
-      ctx.fillRect(x*TS - ox + 1, y*TS - oy + 1, TS - 2, TS - 2);
+      fillCell(ctx, x, y, ppx + 0.5, ppy + 0.5, TS, ox, oy, 1);
     }
 
     const wallT = S.wall[idx(x,y)] === 1;
@@ -181,7 +209,7 @@ export function draw(now){
     if(isValid && !wallT) col = T.lit;
     ctx.shadowBlur = 0;
 
-    if(f) drawWallFace(ctx, f - 1, sx, sy, col);
+    if(f) drawWallFace(ctx, f - 1, sx, sy, col, x, y, ppx + 0.5, ppy + 0.5, TS, ox, oy);
     else if(fl && hasArt(fl) && v){
       /* Dropped gear draws as its sprite, lying at an angle derived from the
          tile index — deterministic, so it never flickers between frames, and

@@ -119,3 +119,63 @@ export function unproject(sx, sy, cx, cy, TS, ox, oy) {
   const py = ay + dy * k;
   return [Math.floor((px + ox) / TS), Math.floor((py + oy) / TS)];
 }
+
+/**
+ * The local shrink at a cell — how much smaller a tile is drawn there.
+ *
+ * Moving centres is not enough on its own. The fold pulls neighbouring
+ * centres closer together as they recede, so a tile drawn at full TS
+ * would overlap its neighbour. The tile has to shrink by the same rate
+ * the spacing does, which is the derivative of the curl:
+ *
+ *   s(r) = r / (1 + k*r^2)      ds/dr = (1 - k*r^2) / (1 + k*r^2)^2
+ *
+ * At r = 0 that is 1 (flat under the player's feet, tiles full size) and
+ * it falls to 0 at the turning radius, which is the horizon closing.
+ * Negative past it — the fold's far side — so it clamps at 0: a tile there
+ * is not small, it is gone.
+ */
+export function foldScaleAt(x, y, cx, cy) {
+  if (FOLD.coef <= 0) return 1;
+  const r = Math.hypot(x - cx, y - cy);
+  const d = 1 + FOLD.coef * r * r;
+  return Math.max(0, (1 - FOLD.coef * r * r) / (d * d));
+}
+
+/** The turning radius in CELLS: past this the ground has curled away and
+ *  nothing should be drawn or picked. The fold's own draw distance. */
+export const foldRadius = () => (FOLD.coef > 0 ? 1 / Math.sqrt(FOLD.coef) : Infinity);
+
+/**
+ * A cell as its four PROJECTED corners, in draw order.
+ *
+ * Scaling a centred rect by the fold's derivative is only an approximation
+ * of the spacing, and the error shows: at coef 0.012 visible GAPS open
+ * between distant tiles, because the true gap between two projected
+ * centres is not TS times the derivative at either of them.
+ *
+ * Projecting the corners has no such error by construction — adjacent
+ * cells share corner coordinates exactly, so the ground is watertight at
+ * any fold strength. Costs four projections a tile instead of one, on a
+ * bounded visible set.
+ */
+export function cellQuad(x, y, cx, cy, TS, ox, oy, inset = 0) {
+  const i = inset / TS;
+  const a = project(x + i, y + i, cx, cy, TS, ox, oy);
+  const b = project(x + 1 - i, y + i, cx, cy, TS, ox, oy);
+  const c = project(x + 1 - i, y + 1 - i, cx, cy, TS, ox, oy);
+  const d = project(x + i, y + 1 - i, cx, cy, TS, ox, oy);
+  return [a, b, c, d];
+}
+
+/** Fill a cell's quad on a 2d context. */
+export function fillCell(ctx, x, y, cx, cy, TS, ox, oy, inset = 0) {
+  const [a, b, c, d] = cellQuad(x, y, cx, cy, TS, ox, oy, inset);
+  ctx.beginPath();
+  ctx.moveTo(a[0], a[1]);
+  ctx.lineTo(b[0], b[1]);
+  ctx.lineTo(c[0], c[1]);
+  ctx.lineTo(d[0], d[1]);
+  ctx.closePath();
+  ctx.fill();
+}
